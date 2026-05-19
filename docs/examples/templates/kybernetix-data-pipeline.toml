@@ -1,0 +1,19 @@
+# kybernetix-data-pipeline
+#
+# Data pipeline / ingestion tasks that span the core pipeline monorepo, the
+# external data-pipelines helpers, and the shared utils library.
+#
+# Usage:
+#   cp docs/examples/templates/kybernetix-data-pipeline.toml ~/.config/brunch/templates/
+#   brunch init task-3456-energy-subsidies -t kybernetix-data-pipeline
+
+description = "Data pipeline pipeline: core pipelines, ingestion, shared utils."
+
+[[repo]]
+repo = "kybernetix/data-pipelines"
+
+[[repo]]
+repo = "kybernetix/data-pipelines"
+
+[[repo]]
+repo = "kybernetix/backend"

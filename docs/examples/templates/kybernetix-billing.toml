@@ -1,0 +1,19 @@
+# kybernetix-billing
+#
+# Billing work: API (rest-style), PDF report generation, and the platform
+# backend for any integration touchpoints. Adjust to taste.
+#
+# Usage:
+#   cp docs/examples/templates/kybernetix-billing.toml ~/.config/brunch/templates/
+#   brunch init task-2345-climate-x -t kybernetix-billing
+
+description = "Billing: API + backend service + backend integration."
+
+[[repo]]
+repo = "kybernetix/backend"
+
+[[repo]]
+repo = "kybernetix/backend"
+
+[[repo]]
+repo = "kybernetix/backend"

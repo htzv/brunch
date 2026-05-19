@@ -17,9 +17,6 @@ runner = CliRunner()
 
 
 STUB_COMMANDS = [
-    ("init", ["x"]),
-    ("add", ["acme/api"]),
-    ("sync", []),
     ("fetch", []),
     ("pull", []),
     ("rebase", []),
@@ -62,10 +59,19 @@ def test_stub_commands_exit_2() -> None:
         assert "not implemented" in result.stdout.lower(), f"{cmd}: stub message missing"
 
 
-def test_implemented_commands_fail_cleanly_outside_a_workspace(tmp_path: Path) -> None:
-    # status and fsck have real implementations (M1). Outside a workspace
+def test_workspace_aware_commands_fail_cleanly_outside_a_workspace(tmp_path: Path) -> None:
+    # status, fsck, sync and add all need a workspace context. Outside one
     # they raise WorkspaceNotFoundError, which the global error handler
     # converts to exit code 3.
-    for cmd in ["status", "fsck"]:
+    for cmd in ["status", "fsck", "sync"]:
         result = runner.invoke(app, [cmd, "-w", str(tmp_path)])
         assert result.exit_code == 3, f"{cmd}: expected exit 3, got {result.exit_code}"
+    result = runner.invoke(app, ["add", "acme/api", "-w", str(tmp_path)])
+    assert result.exit_code == 3, f"add: expected exit 3, got {result.exit_code}"
+
+
+def test_init_creates_workspace_in_tmp_dir(tmp_path: Path) -> None:
+    result = runner.invoke(app, ["init", "smoke-ws", "-p", str(tmp_path)])
+    assert result.exit_code == 0, result.output
+    target = tmp_path / "smoke-ws"
+    assert (target / "brunch.toml").is_file()

@@ -184,3 +184,57 @@ class FsckReport(BaseModel):
     @property
     def has_warnings(self) -> bool:
         return any(f.severity == "warning" for f in self.findings)
+
+
+# --- sync / add / init -----------------------------------------------------
+
+
+SyncActionType = Literal["created", "ok", "warning", "error"]
+
+
+class SyncAction(BaseModel):
+    """One per-repo outcome of a `brunch sync` pass."""
+
+    repo: str
+    short_name: str
+    action: SyncActionType
+    message: str
+    hint: str | None = None
+
+
+class SyncReport(BaseModel):
+    """Aggregate outcome of `brunch sync`."""
+
+    workspace_name: str
+    workspace_path: Path
+    actions: list[SyncAction]
+    dry_run: bool = False
+
+    @property
+    def has_errors(self) -> bool:
+        return any(a.action == "error" for a in self.actions)
+
+    @property
+    def has_warnings(self) -> bool:
+        return any(a.action == "warning" for a in self.actions)
+
+
+class AddOutcome(BaseModel):
+    """Result of `brunch add`."""
+
+    repo: str
+    branch: str
+    base: str
+    worktree_path: Path
+    dry_run: bool = False
+
+
+class InitOutcome(BaseModel):
+    """Result of `brunch init`."""
+
+    name: str
+    mode: WorkspaceMode
+    path: Path
+    template_id: str | None = None
+    sync_report: SyncReport | None = None
+    dry_run: bool = False

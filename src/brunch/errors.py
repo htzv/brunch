@@ -53,3 +53,27 @@ class GitError(BrunchError):
     """A git subprocess failed in a way brunch couldn't recover from."""
 
     exit_code = 7
+
+
+class TemplateError(BrunchError):
+    """A template file is missing, malformed, or otherwise unusable."""
+
+    exit_code = 8
+
+
+class TargetExistsError(BrunchError):
+    """A directory we were asked to create already exists."""
+
+    exit_code = 9
+
+
+class BranchConflictError(BrunchError):
+    """A branch is already checked out in another worktree of the same canonical."""
+
+    exit_code = 10
+
+
+class DuplicateRepoError(BrunchError):
+    """A repo entry already exists in the manifest."""
+
+    exit_code = 11

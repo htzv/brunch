@@ -211,6 +211,14 @@ base = "main"
 
 No `brunch templates list/show/edit` commands. Templates are files in a known directory; `ls` is sufficient discovery for now. If the need for a richer template UX emerges, it can be added later without breaking changes.
 
+### 5.4 Example templates
+
+A handful of starter templates for common Kybernetix workspaces ship in
+[`docs/examples/templates/`](examples/templates/) with installation
+instructions and a per-template summary. They are documentation samples, not
+auto-installed — copy any of them into `~/.config/brunch/templates/` to
+activate.
+
 ---
 
 ## 6. CLI surface
@@ -537,11 +545,11 @@ Things that are decided in principle but will need fine-tuning during implementa
 
 The implementation proceeds in small, testable slices. Each milestone is roughly one focused sitting.
 
-- **M0 — Skeleton.** `pyproject.toml`, package layout, Typer app with every v1 command stubbed, `uv tool install .` working, smoke test for `--version` and `--help`. *(This commit.)*
-- **M1 — Read-only foundation.** Manifest and config parsing, ghq-style path resolution, `brunch status`, `brunch fsck` (basic checks). No mutation yet.
-- **M2 — Workspace creation.** `init` (including `-t <template>`), `add`, `sync` per the drift policy. After this milestone, brunch replaces the manual `git worktree add` workflow.
+- **M0 — Skeleton.** `pyproject.toml`, package layout, Typer app with every v1 command stubbed, `uv tool install .` working, smoke test for `--version` and `--help`. *(Done.)*
+- **M1 — Read-only foundation.** Manifest and config parsing, ghq-style path resolution, `brunch status`, `brunch fsck`. *(Done.)*
+- **M2 — Workspace creation.** `init` (including `-t <template>` and `--set`), `add`, `sync` per the drift policy. After this milestone, brunch replaces the manual `git worktree add` workflow. *(Done.)*
 - **M3 — Cross-repo ops.** `fetch`, `pull`, `rebase`, `foreach`.
 - **M4 — Safe teardown.** `rm` with the archive-on-force flow.
-- **M5 — Set mode.** Walk-up discovery extended to `brunch-set.toml`; set-aware fanout for the existing commands; `init --set`; `fsck` recursion; structured-output polish across the board.
+- **M5 — Set mode.** Walk-up discovery extended to `brunch-set.toml`; set-aware fanout for the existing commands; `fsck` recursion; structured-output polish across the board.
 
 Iteration 2 and 3 follow as outlined in §13.

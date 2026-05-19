@@ -98,6 +98,46 @@ def worktree_list(canonical: Path) -> list[WorktreeRef]:
     return _parse_worktree_list(result.stdout)
 
 
+def branch_exists(canonical: Path, branch: str) -> bool:
+    """True if a local branch named ``branch`` exists in ``canonical``."""
+
+    result = _run(
+        ["show-ref", "--verify", "--quiet", f"refs/heads/{branch}"],
+        cwd=canonical,
+        check=False,
+    )
+    return result.returncode == 0
+
+
+def add_worktree(canonical: Path, target: Path, *, branch: str, base: str = "main") -> None:
+    """Run ``git worktree add`` to materialise a worktree at ``target``.
+
+    If ``branch`` already exists in ``canonical``, it is checked out as-is.
+    Otherwise, it is created from ``base``. Either way, ``target`` ends up on
+    ``branch``.
+    """
+
+    target.parent.mkdir(parents=True, exist_ok=True)
+    if branch_exists(canonical, branch):
+        _run(["worktree", "add", str(target), branch], cwd=canonical)
+    else:
+        _run(["worktree", "add", "-b", branch, str(target), base], cwd=canonical)
+
+
+def remove_worktree(canonical: Path, target: Path, *, force: bool = False) -> None:
+    """Run ``git worktree remove`` against ``target``.
+
+    With ``force=True`` the worktree is removed even if it has local changes;
+    callers are expected to confirm intent first.
+    """
+
+    args = ["worktree", "remove"]
+    if force:
+        args.append("--force")
+    args.append(str(target))
+    _run(args, cwd=canonical)
+
+
 def _parse_worktree_list(text: str) -> list[WorktreeRef]:
     refs: list[WorktreeRef] = []
     current: dict[str, str] = {}

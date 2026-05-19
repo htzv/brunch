@@ -1,0 +1,19 @@
+# kybernetix-platform-ops
+#
+# Platform/ops tasks that touch terraform, the backend CLI, and the backend
+# (since the admin CLI lives next to backend code).
+#
+# Usage:
+#   cp docs/examples/templates/kybernetix-platform-ops.toml ~/.config/brunch/templates/
+#   brunch init task-4567-admin-flow -t kybernetix-platform-ops
+
+description = "Platform ops: terraform templates + backend + backend."
+
+[[repo]]
+repo = "kybernetix/devops"
+
+[[repo]]
+repo = "kybernetix/backend"
+
+[[repo]]
+repo = "kybernetix/backend"

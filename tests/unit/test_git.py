@@ -10,9 +10,12 @@ from brunch.errors import GitError
 from brunch.git import (
     _parse_porcelain_v2,
     _parse_worktree_list,
+    add_worktree,
+    branch_exists,
     current_branch,
     get_status,
     is_git_repo,
+    remove_worktree,
     worktree_list,
 )
 
@@ -155,3 +158,74 @@ class TestWorktreeListParser:
         out = _parse_worktree_list(text)
         assert len(out) == 1
         assert out[0].path == Path("/a/b")
+
+
+class TestBranchExists:
+    def test_main_exists_after_init(self, make_canonical: Callable[..., Path]) -> None:
+        repo = make_canonical()
+        assert branch_exists(repo, "main") is True
+
+    def test_unknown_branch_does_not_exist(self, make_canonical: Callable[..., Path]) -> None:
+        repo = make_canonical()
+        assert branch_exists(repo, "nope") is False
+
+
+class TestAddWorktree:
+    def test_creates_new_branch(self, make_canonical: Callable[..., Path], tmp_path: Path) -> None:
+        repo = make_canonical()
+        target = tmp_path / "new-worktree"
+        add_worktree(repo, target, branch="feature-x", base="main")
+        assert target.is_dir()
+        assert (target / ".git").exists()
+        # New worktree is on its branch.
+        assert current_branch(target) == "feature-x"
+        # Branch shows up in `git worktree list`.
+        branches = {w.branch for w in worktree_list(repo)}
+        assert "feature-x" in branches
+
+    def test_reuses_existing_branch(
+        self, make_canonical: Callable[..., Path], tmp_path: Path
+    ) -> None:
+        repo = make_canonical()
+        # Create the branch in the canonical first (without a worktree).
+        import subprocess
+
+        subprocess.run(
+            ["git", "branch", "preexisting", "main"],
+            cwd=repo,
+            check=True,
+            capture_output=True,
+        )
+        target = tmp_path / "wt"
+        add_worktree(repo, target, branch="preexisting", base="main")
+        assert current_branch(target) == "preexisting"
+
+    def test_makes_parent_dirs(self, make_canonical: Callable[..., Path], tmp_path: Path) -> None:
+        repo = make_canonical()
+        target = tmp_path / "a" / "b" / "c" / "wt"
+        add_worktree(repo, target, branch="feat", base="main")
+        assert target.is_dir()
+
+
+class TestRemoveWorktree:
+    def test_removes_clean_worktree(
+        self, make_canonical: Callable[..., Path], tmp_path: Path
+    ) -> None:
+        repo = make_canonical()
+        target = tmp_path / "wt"
+        add_worktree(repo, target, branch="feat", base="main")
+        remove_worktree(repo, target)
+        assert not target.exists()
+        branches = {w.branch for w in worktree_list(repo)}
+        assert "feat" not in branches  # the worktree, that is — branch still exists
+
+    def test_force_removes_dirty_worktree(
+        self, make_canonical: Callable[..., Path], tmp_path: Path
+    ) -> None:
+        repo = make_canonical()
+        target = tmp_path / "wt"
+        add_worktree(repo, target, branch="feat", base="main")
+        (target / "dirty.txt").write_text("changes\n", encoding="utf-8")
+        # Without force, git would refuse.
+        remove_worktree(repo, target, force=True)
+        assert not target.exists()
