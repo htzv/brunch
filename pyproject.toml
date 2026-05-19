@@ -34,6 +34,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0",
+    "pytest-cov>=5.0",
     "ruff>=0.4",
     "mypy>=1.10",
 ]
@@ -65,6 +66,12 @@ select = [
     "RUF",           # ruff-specific
 ]
 
+# B008 ("don't call functions in argument defaults") doesn't fit Typer's
+# parameter declaration idiom, which is the only way to declare CLI options
+# in this codebase. Suppress it inside command controllers.
+[tool.ruff.lint.per-file-ignores]
+"src/brunch/commands/*.py" = ["B008"]
+
 [tool.mypy]
 python_version = "3.11"
 strict = true
@@ -77,4 +84,18 @@ disallow_untyped_defs = false
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-ra"
+addopts = "-ra --strict-markers"
+
+[tool.coverage.run]
+source = ["brunch"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+fail_under = 85
+exclude_lines = [
+    "pragma: no cover",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+]

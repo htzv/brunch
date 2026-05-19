@@ -4,7 +4,7 @@ import typer
 
 
 def foreach(
-    command: list[str] = typer.Argument(  # noqa: B008
+    command: list[str] = typer.Argument(
         ..., help="Command to run in each repo (use -- to separate)."
     ),
 ) -> None:

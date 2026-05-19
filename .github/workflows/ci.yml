@@ -1,0 +1,78 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+      - name: install deps
+        run: uv sync --extra dev
+      - name: ruff check
+        run: uv run ruff check .
+      - name: ruff format check
+        run: uv run ruff format --check .
+
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+      - name: install deps
+        run: uv sync --extra dev
+      - name: mypy
+        run: uv run mypy src
+
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+      - name: install python ${{ matrix.python-version }}
+        run: uv python install ${{ matrix.python-version }}
+      - name: install deps
+        run: uv sync --extra dev --python ${{ matrix.python-version }}
+      - name: configure git identity
+        run: |
+          git config --global user.name "brunch-ci"
+          git config --global user.email "brunch-ci@example.invalid"
+      - name: pytest (with coverage)
+        run: uv run --python ${{ matrix.python-version }} pytest --cov=brunch --cov-report=term-missing
+
+  build:
+    runs-on: ubuntu-latest
+    needs: [lint, typecheck, test]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+      - name: build wheel + sdist
+        run: uv build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: brunch-dist
+          path: dist/
+          retention-days: 7
