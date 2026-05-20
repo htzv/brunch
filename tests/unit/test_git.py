@@ -13,9 +13,15 @@ from brunch.git import (
     add_worktree,
     branch_exists,
     current_branch,
+    fetch,
     get_status,
+    has_remote,
     is_git_repo,
+    pull,
+    rebase,
+    rebase_in_progress,
     remove_worktree,
+    rev_parse_verify,
     worktree_list,
 )
 
@@ -229,3 +235,147 @@ class TestRemoveWorktree:
         # Without force, git would refuse.
         remove_worktree(repo, target, force=True)
         assert not target.exists()
+
+
+class TestRevParseVerify:
+    def test_existing_branch(self, make_canonical: Callable[..., Path]) -> None:
+        repo = make_canonical()
+        assert rev_parse_verify(repo, "main") is True
+
+    def test_missing_branch(self, make_canonical: Callable[..., Path]) -> None:
+        repo = make_canonical()
+        assert rev_parse_verify(repo, "no-such-branch") is False
+
+    def test_missing_remote_tracking(self, make_canonical: Callable[..., Path]) -> None:
+        repo = make_canonical()
+        assert rev_parse_verify(repo, "origin/main") is False
+
+
+class TestHasRemote:
+    def test_repo_with_no_remote(self, make_canonical: Callable[..., Path]) -> None:
+        assert has_remote(make_canonical()) is False
+
+    def test_repo_with_origin(self, make_canonical: Callable[..., Path]) -> None:
+        a = make_canonical("origin-target")
+        b = make_canonical("with-origin")
+        import subprocess
+
+        subprocess.run(
+            ["git", "remote", "add", "origin", str(a)],
+            cwd=b,
+            check=True,
+            capture_output=True,
+        )
+        assert has_remote(b) is True
+
+
+class TestFetch:
+    def test_fetch_from_origin_succeeds(self, make_canonical: Callable[..., Path]) -> None:
+        upstream = make_canonical("upstream")
+        downstream = make_canonical("downstream")
+        import subprocess
+
+        subprocess.run(
+            ["git", "remote", "add", "origin", str(upstream)],
+            cwd=downstream,
+            check=True,
+            capture_output=True,
+        )
+        fetch(downstream)
+        # origin/main should now resolve.
+        assert rev_parse_verify(downstream, "origin/main") is True
+
+    def test_fetch_without_remote_is_noop(self, make_canonical: Callable[..., Path]) -> None:
+        # Modern git returns 0 with no output when no remote is configured;
+        # callers don't need to special-case the "no remote" path.
+        fetch(make_canonical())
+
+
+class TestPull:
+    def test_pull_brings_in_new_commits(
+        self, make_canonical: Callable[..., Path], tmp_path: Path
+    ) -> None:
+        upstream = make_canonical("upstream")
+        # Clone via filesystem so origin is wired up.
+        import subprocess
+
+        downstream = tmp_path / "downstream"
+        subprocess.run(
+            ["git", "clone", str(upstream), str(downstream)],
+            check=True,
+            capture_output=True,
+        )
+        # Add a commit upstream.
+        (upstream / "new.txt").write_text("hi\n", encoding="utf-8")
+        subprocess.run(["git", "add", "."], cwd=upstream, check=True, capture_output=True)
+        subprocess.run(
+            ["git", "commit", "-m", "upstream-commit"],
+            cwd=upstream,
+            check=True,
+            capture_output=True,
+        )
+        pull(downstream)
+        assert (downstream / "new.txt").exists()
+
+
+class TestRebase:
+    def test_rebase_linear_succeeds(
+        self,
+        make_canonical: Callable[..., Path],
+        tmp_path: Path,
+        worktree_factory: Callable[..., None],
+    ) -> None:
+        repo = make_canonical()
+        wt = tmp_path / "wt"
+        worktree_factory(repo, wt, branch="feature", base="main")
+        # Advance main by one commit (in the canonical's main worktree).
+        import subprocess
+
+        (repo / "moved.txt").write_text("x\n", encoding="utf-8")
+        subprocess.run(["git", "add", "."], cwd=repo, check=True, capture_output=True)
+        subprocess.run(
+            ["git", "commit", "-m", "advance-main"],
+            cwd=repo,
+            check=True,
+            capture_output=True,
+        )
+        # Now rebase the feature worktree onto the new main.
+        rebase(wt, "main")
+        # The worktree should now also have moved.txt.
+        assert (wt / "moved.txt").exists()
+
+    def test_rebase_in_progress_after_conflict(
+        self,
+        make_canonical: Callable[..., Path],
+        tmp_path: Path,
+        worktree_factory: Callable[..., None],
+    ) -> None:
+        from brunch.errors import GitError
+
+        repo = make_canonical()
+        wt = tmp_path / "wt"
+        worktree_factory(repo, wt, branch="feature", base="main")
+        # Conflicting edit on feature.
+        (wt / "README.md").write_text("feature change\n", encoding="utf-8")
+        import subprocess
+
+        subprocess.run(["git", "add", "."], cwd=wt, check=True, capture_output=True)
+        subprocess.run(
+            ["git", "commit", "-m", "feature-edit"],
+            cwd=wt,
+            check=True,
+            capture_output=True,
+        )
+        # Conflicting edit on main (in the canonical).
+        (repo / "README.md").write_text("main change\n", encoding="utf-8")
+        subprocess.run(["git", "add", "."], cwd=repo, check=True, capture_output=True)
+        subprocess.run(
+            ["git", "commit", "-m", "main-edit"],
+            cwd=repo,
+            check=True,
+            capture_output=True,
+        )
+        # Rebase should hit a conflict.
+        with pytest.raises(GitError):
+            rebase(wt, "main")
+        assert rebase_in_progress(wt) is True

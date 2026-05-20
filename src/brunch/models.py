@@ -238,3 +238,125 @@ class InitOutcome(BaseModel):
     template_id: str | None = None
     sync_report: SyncReport | None = None
     dry_run: bool = False
+
+
+# --- fetch / pull / rebase / foreach (M3) ----------------------------------
+
+
+FetchActionType = Literal["fetched", "would_fetch", "skipped", "error"]
+
+
+class FetchAction(BaseModel):
+    """Per-repo outcome of `brunch fetch`."""
+
+    repo: str
+    short_name: str
+    action: FetchActionType
+    message: str
+    hint: str | None = None
+
+
+class FetchReport(BaseModel):
+    """Aggregate outcome of `brunch fetch`."""
+
+    workspace_name: str
+    workspace_path: Path
+    actions: list[FetchAction]
+    dry_run: bool = False
+
+    @property
+    def has_errors(self) -> bool:
+        return any(a.action == "error" for a in self.actions)
+
+
+PullActionType = Literal["pulled", "would_pull", "skipped", "error"]
+
+
+class PullAction(BaseModel):
+    """Per-repo outcome of `brunch pull`."""
+
+    repo: str
+    short_name: str
+    action: PullActionType
+    message: str
+    hint: str | None = None
+
+
+class PullReport(BaseModel):
+    """Aggregate outcome of `brunch pull`."""
+
+    workspace_name: str
+    workspace_path: Path
+    actions: list[PullAction]
+    dry_run: bool = False
+
+    @property
+    def has_errors(self) -> bool:
+        return any(a.action == "error" for a in self.actions)
+
+
+RebaseActionType = Literal[
+    "rebased",
+    "up_to_date",
+    "conflict",
+    "skipped",
+    "would_rebase",
+    "error",
+]
+
+
+class RebaseAction(BaseModel):
+    """Per-repo outcome of `brunch rebase`."""
+
+    repo: str
+    short_name: str
+    action: RebaseActionType
+    target: str  # what we rebased onto (e.g. "origin/main")
+    message: str
+    hint: str | None = None
+
+
+class RebaseReport(BaseModel):
+    """Aggregate outcome of `brunch rebase`."""
+
+    workspace_name: str
+    workspace_path: Path
+    actions: list[RebaseAction]
+    dry_run: bool = False
+
+    @property
+    def has_errors(self) -> bool:
+        return any(a.action == "error" for a in self.actions)
+
+    @property
+    def has_conflicts(self) -> bool:
+        return any(a.action == "conflict" for a in self.actions)
+
+
+ForeachActionType = Literal["ok", "failed", "skipped", "would_run", "error"]
+
+
+class ForeachAction(BaseModel):
+    """Per-repo outcome of `brunch foreach`."""
+
+    repo: str
+    short_name: str
+    action: ForeachActionType
+    exit_code: int | None = None
+    stdout: str | None = None
+    stderr: str | None = None
+    message: str | None = None
+
+
+class ForeachReport(BaseModel):
+    """Aggregate outcome of `brunch foreach`."""
+
+    workspace_name: str
+    workspace_path: Path
+    command: list[str]
+    actions: list[ForeachAction]
+    dry_run: bool = False
+
+    @property
+    def has_errors(self) -> bool:
+        return any(a.action in ("failed", "error") for a in self.actions)

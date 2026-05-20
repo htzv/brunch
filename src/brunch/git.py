@@ -138,6 +138,74 @@ def remove_worktree(canonical: Path, target: Path, *, force: bool = False) -> No
     _run(args, cwd=canonical)
 
 
+def rev_parse_verify(path: Path, ref: str) -> bool:
+    """True if ``ref`` resolves to a commit in the repo at ``path``."""
+
+    result = _run(["rev-parse", "--verify", "--quiet", ref], cwd=path, check=False)
+    return result.returncode == 0
+
+
+def has_remote(path: Path) -> bool:
+    """True if the repo at ``path`` has any remote configured."""
+
+    result = _run(["remote"], cwd=path, check=False)
+    if result.returncode != 0:
+        return False
+    return bool(result.stdout.strip())
+
+
+def fetch(path: Path) -> None:
+    """Run ``git fetch`` (default remote) inside the worktree at ``path``.
+
+    Raises ``GitError`` on any failure. Caller is responsible for handling
+    "no remote configured" if it wants to degrade gracefully.
+    """
+
+    _run(["fetch"], cwd=path)
+
+
+def pull(path: Path) -> None:
+    """Run ``git pull`` (default remote, default merge strategy)."""
+
+    _run(["pull"], cwd=path)
+
+
+def rebase(
+    path: Path,
+    target: str,
+    *,
+    upstream: str | None = None,
+    autostash: bool = False,
+) -> None:
+    """Run ``git rebase`` inside ``path``.
+
+    When ``upstream`` is provided, the three-arg form is used:
+    ``git rebase --onto <target> <upstream>``. Otherwise: ``git rebase
+    <target>``.
+    """
+
+    args = ["rebase"]
+    if autostash:
+        args.append("--autostash")
+    if upstream is not None:
+        args.extend(["--onto", target, upstream])
+    else:
+        args.append(target)
+    _run(args, cwd=path)
+
+
+def rebase_in_progress(path: Path) -> bool:
+    """True if a rebase is currently in progress (e.g. left after a conflict)."""
+
+    result = _run(["rev-parse", "--git-dir"], cwd=path, check=False)
+    if result.returncode != 0:
+        return False
+    git_dir = Path(result.stdout.strip())
+    if not git_dir.is_absolute():
+        git_dir = path / git_dir
+    return (git_dir / "rebase-apply").exists() or (git_dir / "rebase-merge").exists()
+
+
 def _parse_worktree_list(text: str) -> list[WorktreeRef]:
     refs: list[WorktreeRef] = []
     current: dict[str, str] = {}

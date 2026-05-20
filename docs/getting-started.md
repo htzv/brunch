@@ -114,11 +114,29 @@ brunch status --json     # structured output for agents / pipes
 Make a change in one worktree and re-run `status` — uncommitted/untracked
 markers update accordingly.
 
-### 4. Cross-repo operations (M3 — coming)
+### 4. Cross-repo operations
 
-Once M3 lands you'll be able to run `brunch fetch`, `brunch pull`,
-`brunch rebase`, and `brunch foreach <cmd>` to fan out across all repos in
-the workspace.
+Fan out across all repos in one command:
+
+```bash
+brunch fetch                         # git fetch in each repo (skipped where no remote)
+brunch pull                          # git pull in each repo
+brunch rebase                        # per-repo fetch + rebase onto each entry's base
+brunch rebase --onto wip-branch      # rebase each worktree onto a sibling branch
+brunch rebase --no-fetch             # skip the pre-rebase fetch
+brunch rebase --continue-on-error    # don't stop at the first conflict
+brunch foreach -- pnpm install       # run a command in each repo's worktree
+brunch foreach --json -- pytest      # capture per-repo output as structured JSON
+```
+
+`brunch rebase` prefers `origin/<base>` when it exists (so a remote-tracking
+ref is the freshest target), falling back to the local `<base>` branch
+otherwise. Conflicts leave that repo's rebase in progress; resolve in the
+worktree, then `git rebase --continue` (or `--abort`).
+
+`brunch foreach` streams output live by default and captures per-repo with
+`--json`. Use `--` to separate options for the foreach command from options
+for the user's command (e.g. `brunch foreach -- pnpm -F backend lint`).
 
 ### 5. Diagnose
 
@@ -168,12 +186,16 @@ the bundled examples.
 
 ## JSON output for agents
 
-Every read command supports `--json`. The shape is stable and Pydantic-driven:
+Every read/mutation command supports `--json`. The shape is stable and
+Pydantic-driven:
 
 ```bash
 brunch status --json
 brunch fsck --json
 brunch sync --json --dry-run
+brunch fetch --json
+brunch rebase --json --no-fetch
+brunch foreach --json -- pytest -q
 ```
 
 The output is suitable for piping into `jq` or for parsing inside an agent's

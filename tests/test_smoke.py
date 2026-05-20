@@ -17,10 +17,6 @@ runner = CliRunner()
 
 
 STUB_COMMANDS = [
-    ("fetch", []),
-    ("pull", []),
-    ("rebase", []),
-    ("foreach", ["echo", "hi"]),
     ("rm", []),
 ]
 
@@ -60,14 +56,16 @@ def test_stub_commands_exit_2() -> None:
 
 
 def test_workspace_aware_commands_fail_cleanly_outside_a_workspace(tmp_path: Path) -> None:
-    # status, fsck, sync and add all need a workspace context. Outside one
+    # All workspace-scoped commands need a workspace context. Outside one
     # they raise WorkspaceNotFoundError, which the global error handler
     # converts to exit code 3.
-    for cmd in ["status", "fsck", "sync"]:
+    for cmd in ["status", "fsck", "sync", "fetch", "pull", "rebase"]:
         result = runner.invoke(app, [cmd, "-w", str(tmp_path)])
         assert result.exit_code == 3, f"{cmd}: expected exit 3, got {result.exit_code}"
     result = runner.invoke(app, ["add", "acme/api", "-w", str(tmp_path)])
     assert result.exit_code == 3, f"add: expected exit 3, got {result.exit_code}"
+    result = runner.invoke(app, ["foreach", "true", "-w", str(tmp_path)])
+    assert result.exit_code == 3, f"foreach: expected exit 3, got {result.exit_code}"
 
 
 def test_init_creates_workspace_in_tmp_dir(tmp_path: Path) -> None:

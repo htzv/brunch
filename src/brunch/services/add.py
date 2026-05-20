@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterator
+
 from brunch import git
 from brunch.errors import (
     BranchConflictError,
@@ -11,8 +13,6 @@ from brunch.errors import (
     WorkspaceNotFoundError,
 )
 from brunch.manifest import load_workspace_manifest, write_workspace_manifest
-from collections.abc import Iterator
-
 from brunch.models import (
     AddOutcome,
     RepoEntry,
@@ -108,14 +108,12 @@ def add_repo(
     )
 
 
-def _existing_short_names(
-    manifest: WorkspaceManifest, config: ToolConfig
-) -> Iterator[str]:
+def _existing_short_names(manifest: WorkspaceManifest, config: ToolConfig) -> Iterator[str]:
     """Yield the short_name of every entry whose repo parses cleanly."""
 
     for entry in manifest.repos:
         try:
             spec = parse_repo_spec(entry.repo, default_forge=config.default_forge)
-        except Exception:  # noqa: BLE001
+        except Exception:
             continue
         yield spec.name

@@ -548,7 +548,7 @@ The implementation proceeds in small, testable slices. Each milestone is roughly
 - **M0 — Skeleton.** `pyproject.toml`, package layout, Typer app with every v1 command stubbed, `uv tool install .` working, smoke test for `--version` and `--help`. *(Done.)*
 - **M1 — Read-only foundation.** Manifest and config parsing, ghq-style path resolution, `brunch status`, `brunch fsck`. *(Done.)*
 - **M2 — Workspace creation.** `init` (including `-t <template>` and `--set`), `add`, `sync` per the drift policy. After this milestone, brunch replaces the manual `git worktree add` workflow. *(Done.)*
-- **M3 — Cross-repo ops.** `fetch`, `pull`, `rebase`, `foreach`.
+- **M3 — Cross-repo ops.** `fetch`, `pull`, `rebase`, `foreach`. *(Done.)*
 - **M4 — Safe teardown.** `rm` with the archive-on-force flow.
 - **M5 — Set mode.** Walk-up discovery extended to `brunch-set.toml`; set-aware fanout for the existing commands; `fsck` recursion; structured-output polish across the board.
 

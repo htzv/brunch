@@ -6,13 +6,20 @@ in isolation and easy to evolve without churning command modules.
 
 from __future__ import annotations
 
+from pathlib import Path
+from typing import Any
+
 from rich.console import Console
 from rich.table import Table
 
 from brunch.models import (
     AddOutcome,
+    FetchReport,
+    ForeachReport,
     FsckReport,
     InitOutcome,
+    PullReport,
+    RebaseReport,
     RepoStatus,
     SyncReport,
     WorkspaceStatus,
@@ -23,6 +30,33 @@ _SYNC_ACTION_STYLE = {
     "created": "green",
     "ok": "dim",
     "warning": "yellow",
+    "error": "red",
+}
+_FETCH_ACTION_STYLE = {
+    "fetched": "green",
+    "would_fetch": "cyan",
+    "skipped": "dim",
+    "error": "red",
+}
+_PULL_ACTION_STYLE = {
+    "pulled": "green",
+    "would_pull": "cyan",
+    "skipped": "dim",
+    "error": "red",
+}
+_REBASE_ACTION_STYLE = {
+    "rebased": "green",
+    "up_to_date": "dim",
+    "would_rebase": "cyan",
+    "skipped": "dim",
+    "conflict": "red",
+    "error": "red",
+}
+_FOREACH_ACTION_STYLE = {
+    "ok": "green",
+    "failed": "red",
+    "skipped": "dim",
+    "would_run": "cyan",
     "error": "red",
 }
 
@@ -142,6 +176,120 @@ def render_add_outcome(outcome: AddOutcome, *, console: Console | None = None) -
     verb = "would add" if outcome.dry_run else "[green]added[/green]"
     console.print(f"{prefix}{verb} {outcome.repo} on {outcome.branch!r} (base {outcome.base!r})")
     console.print(f"        at {outcome.worktree_path}")
+
+
+def _render_action_list(
+    *,
+    console: Console,
+    title: str,
+    workspace_name: str,
+    workspace_path: Path,
+    dry_run: bool,
+    actions: list[Any],
+    style_map: dict[str, str],
+) -> None:
+    """Shared shape for fetch / pull / rebase / foreach renderers."""
+
+    prefix = "[dim](dry-run)[/dim] " if dry_run else ""
+    console.print(f"{prefix}[bold]{title}[/bold]  {workspace_name}")
+    console.print(f"      [bold]path[/bold]   {workspace_path}")
+
+    if not actions:
+        console.print("\n[dim](no repos in manifest)[/dim]")
+        return
+
+    console.print()
+    for a in actions:
+        style = style_map.get(a.action, "white")
+        label = a.action.upper().replace("_", " ")
+        console.print(f"  [{style}]{label:<12}[/{style}] {a.short_name}  [dim]({a.repo})[/dim]")
+        if getattr(a, "message", None):
+            console.print(f"               {a.message}")
+        if getattr(a, "hint", None):
+            console.print(f"               [dim]hint:[/dim] {a.hint}")
+
+
+def render_fetch_report(report: FetchReport, *, console: Console | None = None) -> None:
+    """Render a :class:`FetchReport`."""
+
+    console = console or Console()
+    _render_action_list(
+        console=console,
+        title="fetch",
+        workspace_name=report.workspace_name,
+        workspace_path=report.workspace_path,
+        dry_run=report.dry_run,
+        actions=report.actions,
+        style_map=_FETCH_ACTION_STYLE,
+    )
+
+
+def render_pull_report(report: PullReport, *, console: Console | None = None) -> None:
+    """Render a :class:`PullReport`."""
+
+    console = console or Console()
+    _render_action_list(
+        console=console,
+        title="pull",
+        workspace_name=report.workspace_name,
+        workspace_path=report.workspace_path,
+        dry_run=report.dry_run,
+        actions=report.actions,
+        style_map=_PULL_ACTION_STYLE,
+    )
+
+
+def render_rebase_report(report: RebaseReport, *, console: Console | None = None) -> None:
+    """Render a :class:`RebaseReport`. Targets are added inline."""
+
+    console = console or Console()
+    prefix = "[dim](dry-run)[/dim] " if report.dry_run else ""
+    console.print(f"{prefix}[bold]rebase[/bold]  {report.workspace_name}")
+    console.print(f"        [bold]path[/bold]   {report.workspace_path}")
+
+    if not report.actions:
+        console.print("\n[dim](no repos in manifest)[/dim]")
+        return
+
+    console.print()
+    for a in report.actions:
+        style = _REBASE_ACTION_STYLE.get(a.action, "white")
+        label = a.action.upper().replace("_", " ")
+        console.print(
+            f"  [{style}]{label:<13}[/{style}] {a.short_name}  "
+            f"[dim]({a.repo})[/dim]  [dim]→ {a.target}[/dim]"
+        )
+        if a.message:
+            console.print(f"                {a.message}")
+        if a.hint:
+            console.print(f"                [dim]hint:[/dim] {a.hint}")
+
+
+def render_foreach_report(report: ForeachReport, *, console: Console | None = None) -> None:
+    """Render a :class:`ForeachReport`. Captured stdout/stderr is included
+    if present (i.e. --json mode); in live-streaming mode the actual output
+    has already been printed to the terminal."""
+
+    console = console or Console()
+    prefix = "[dim](dry-run)[/dim] " if report.dry_run else ""
+    console.print(f"{prefix}[bold]foreach[/bold]  {report.workspace_name}")
+    console.print(f"         [bold]path[/bold]    {report.workspace_path}")
+    console.print(f"         [bold]command[/bold] {report.command}")
+
+    if not report.actions:
+        console.print("\n[dim](no repos in manifest)[/dim]")
+        return
+
+    console.print()
+    for a in report.actions:
+        style = _FOREACH_ACTION_STYLE.get(a.action, "white")
+        label = a.action.upper().replace("_", " ")
+        suffix = f" (exit {a.exit_code})" if a.exit_code is not None else ""
+        console.print(
+            f"  [{style}]{label:<10}[/{style}] {a.short_name}  [dim]({a.repo})[/dim]{suffix}"
+        )
+        if a.message:
+            console.print(f"             {a.message}")
 
 
 def render_init_outcome(outcome: InitOutcome, *, console: Console | None = None) -> None:
