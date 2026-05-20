@@ -9,8 +9,9 @@ from rich.console import Console
 
 from brunch.config import load_config
 from brunch.paths import discover_workspace
-from brunch.rendering import render_foreach_report
+from brunch.rendering import render_foreach_report, render_set_foreach_report
 from brunch.services.foreach import foreach_workspace
+from brunch.services.set_ops import foreach_set
 
 
 def foreach(
@@ -21,7 +22,7 @@ def foreach(
         None,
         "-w",
         "--workspace",
-        help="Operate on the workspace at this path (default: walk up from cwd).",
+        help="Operate on the workspace (or set) at this path (default: walk up from cwd).",
     ),
     continue_on_error: bool = typer.Option(
         False,
@@ -37,7 +38,7 @@ def foreach(
         False, "--dry-run", help="Show what would happen without doing it."
     ),
 ) -> None:
-    """Run a command in each repo of the workspace."""
+    """Run a command in each repo of the workspace (or set)."""
 
     location = discover_workspace(workspace or Path.cwd())
     cfg = load_config()
@@ -45,6 +46,24 @@ def foreach(
 
     def _header(short_name: str, worktree_path: Path) -> None:
         console.print(f"\n[bold cyan]==> {short_name}[/bold cyan]  [dim]({worktree_path})[/dim]")
+
+    if location.mode == "set":
+        set_report = foreach_set(
+            location,
+            cfg,
+            command=list(command),
+            capture_output=json_output,
+            continue_on_error=continue_on_error,
+            dry_run=dry_run,
+        )
+        if json_output:
+            typer.echo(set_report.model_dump_json(indent=2))
+        else:
+            console.print()
+            render_set_foreach_report(set_report, console=console)
+        if set_report.has_errors:
+            raise typer.Exit(code=1)
+        return
 
     report = foreach_workspace(
         location,

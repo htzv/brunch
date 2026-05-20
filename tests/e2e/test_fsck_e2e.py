@@ -94,5 +94,7 @@ class TestFsckE2E:
         ws = _setup_clean(isolated_home, make_canonical, make_workspace, worktree_factory)
         result = runner.invoke(app, ["fsck", "-w", str(ws), "--fix"])
         # --fix prints a notice to stderr; CliRunner mixes streams by default.
-        assert "M5" in result.output or "M5" in (result.stderr if hasattr(result, "stderr") else "")
+        assert "no fixable issues" in result.output or "no fixable issues" in (
+            result.stderr if hasattr(result, "stderr") else ""
+        )
         assert result.exit_code == 0

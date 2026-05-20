@@ -53,12 +53,18 @@ def rm_workspace(
     *,
     force: bool = False,
     dry_run: bool = False,
+    skip_archive: bool = False,
 ) -> RmOutcome:
-    """Remove ``location``'s workspace, archiving first when ``force`` is set."""
+    """Remove ``location``'s workspace, archiving first when ``force`` is set.
+
+    ``skip_archive`` is an internal escape hatch used by :func:`rm_set` to
+    avoid double-archiving each member when the whole set has already been
+    captured in one tarball. Not meant for direct CLI use.
+    """
 
     if location.mode != "workspace":
         raise WorkspaceNotFoundError(
-            f"rm at set roots isn't supported yet (got mode={location.mode!r})",
+            f"rm_workspace requires a workspace location (got mode={location.mode!r})",
             hint="cd into one of the child workspaces, or pass -w <path>.",
         )
 
@@ -101,65 +107,17 @@ def rm_workspace(
     # any destructive action. Fail-closed: if the archive can't be written,
     # don't remove anything.
     archive_path: Path | None = None
-    if force:
-        try:
-            archive_path = create_workspace_archive(
-                location.root,
-                workspace_name=manifest.name,
-                archive_dir=default_archive_dir(),
-            )
-        except OSError as e:
-            raise BrunchError(
-                f"failed to write archive: {e}",
-                hint=(
-                    "removal aborted to avoid losing data; resolve the archive "
-                    "write failure (disk space, permissions on "
-                    f"{default_archive_dir()}) and retry."
-                ),
-            ) from e
+    if force and not skip_archive:
+        archive_path = _archive_or_raise(location.root, manifest.name)
 
-    # Per-repo removal.
-    actions: list[RmRepoAction] = []
-    canonicals_touched: set[Path] = set()
-    for entry in manifest.repos:
-        action, canonical_used = _remove_one(entry, location.root, config, force=force)
-        actions.append(action)
-        if canonical_used is not None:
-            canonicals_touched.add(canonical_used)
-
-    # Best-effort prune of dangling refs in each touched canonical.
-    for canonical in canonicals_touched:
-        try:
-            git.worktree_prune(canonical)
-        except GitError:
-            pass
-
-    # Apply the safety contract: only remove brunch.toml + the workspace dir
-    # if nothing unknown remains. Never `rmtree` the workspace.
-    preserved = _enumerate_preserved(location.root, declared_paths)
-    outcome_action: RmActionType
-    if preserved:
-        outcome_action = "partial"
-    else:
-        # Safe to remove the marker + an empty workspace dir.
-        manifest_file = location.root / MANIFEST_FILENAME
-        if manifest_file.is_file():
-            try:
-                manifest_file.unlink()
-            except OSError:
-                # Could not delete the marker — leave everything else alone.
-                preserved = _enumerate_preserved(location.root, declared_paths)
-        if not preserved and location.root.exists():
-            try:
-                location.root.rmdir()
-                outcome_action = "removed"
-            except OSError:
-                # Something else snuck in (race) or rmdir was denied. Recompute
-                # preserved to reflect reality and downgrade to partial.
-                preserved = _enumerate_preserved(location.root, declared_paths)
-                outcome_action = "partial"
-        else:
-            outcome_action = "partial" if preserved else "removed"
+    actions, preserved, outcome_action = _remove_workspace_in_place(
+        location.root,
+        manifest,
+        declared_paths,
+        config,
+        force=force,
+        manifest_filename=MANIFEST_FILENAME,
+    )
 
     return RmOutcome(
         workspace_name=manifest.name,
@@ -171,6 +129,93 @@ def rm_workspace(
         archive_path=archive_path,
         forced=force,
     )
+
+
+def archive_or_raise(root: Path, name: str) -> Path:
+    """Archive ``root`` to the default archive dir or raise BrunchError.
+
+    Exposed for :mod:`brunch.services.set_ops`, which archives the whole set
+    once before delegating to per-member removals.
+    """
+
+    return _archive_or_raise(root, name)
+
+
+def _archive_or_raise(root: Path, name: str) -> Path:
+    """Archive ``root`` to the default archive dir or raise BrunchError."""
+
+    try:
+        return create_workspace_archive(
+            root,
+            workspace_name=name,
+            archive_dir=default_archive_dir(),
+        )
+    except OSError as e:
+        raise BrunchError(
+            f"failed to write archive: {e}",
+            hint=(
+                "removal aborted to avoid losing data; resolve the archive "
+                "write failure (disk space, permissions on "
+                f"{default_archive_dir()}) and retry."
+            ),
+        ) from e
+
+
+def _remove_workspace_in_place(
+    root: Path,
+    manifest: WorkspaceManifest,
+    declared_paths: set[Path],
+    config: ToolConfig,
+    *,
+    force: bool,
+    manifest_filename: str,
+) -> tuple[list[RmRepoAction], list[Path], RmActionType]:
+    """Run the per-repo removal + safety-aware dir cleanup.
+
+    No archive is created here; callers that want one must arrange it
+    *before* invoking this function so a failure to archive can short-
+    circuit the destruction. Returns (repo_actions, preserved, outcome).
+    """
+
+    actions: list[RmRepoAction] = []
+    canonicals_touched: set[Path] = set()
+    for entry in manifest.repos:
+        action, canonical_used = _remove_one(entry, root, config, force=force)
+        actions.append(action)
+        if canonical_used is not None:
+            canonicals_touched.add(canonical_used)
+
+    # Best-effort prune of dangling refs in each touched canonical.
+    for canonical in canonicals_touched:
+        try:
+            git.worktree_prune(canonical)
+        except GitError:
+            pass
+
+    # Apply the safety contract: only remove the marker + the workspace dir
+    # if nothing unknown remains. Never `rmtree` the workspace.
+    preserved = _enumerate_preserved(root, declared_paths)
+    outcome: RmActionType
+    if preserved:
+        return actions, preserved, "partial"
+
+    manifest_file = root / manifest_filename
+    if manifest_file.is_file():
+        try:
+            manifest_file.unlink()
+        except OSError:
+            preserved = _enumerate_preserved(root, declared_paths)
+    if not preserved and root.exists():
+        try:
+            root.rmdir()
+            outcome = "removed"
+        except OSError:
+            preserved = _enumerate_preserved(root, declared_paths)
+            outcome = "partial"
+    else:
+        outcome = "partial" if preserved else "removed"
+
+    return actions, preserved, outcome
 
 
 # ---------------------------------------------------------------------------

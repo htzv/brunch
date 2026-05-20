@@ -66,6 +66,43 @@ def canonical_clone_path(spec: RepoSpec, *, root: Path) -> Path:
     return expand_root(root) / spec.forge / spec.org / spec.name
 
 
+def discover_set_members(set_root: Path) -> list[WorkspaceLocation]:
+    """Return direct child workspaces of ``set_root``.
+
+    A child is considered a member if it is a direct subdirectory that
+    contains a ``brunch.toml`` marker. Symlinks are not followed. Results
+    are sorted by directory name so callers get stable ordering.
+    """
+
+    members: list[WorkspaceLocation] = []
+    if not set_root.is_dir():
+        return members
+
+    try:
+        with os.scandir(set_root) as it:
+            entries = sorted(it, key=lambda e: e.name)
+    except OSError:
+        return members
+
+    for entry in entries:
+        try:
+            if not entry.is_dir(follow_symlinks=False):
+                continue
+        except OSError:
+            continue
+        child = Path(entry.path)
+        manifest_path = child / WORKSPACE_MARKER
+        if manifest_path.is_file():
+            members.append(
+                WorkspaceLocation(
+                    mode="workspace",
+                    root=child,
+                    manifest_path=manifest_path,
+                )
+            )
+    return members
+
+
 def discover_workspace(start: Path) -> WorkspaceLocation:
     """Walk up from ``start`` looking for a workspace or set marker.
 

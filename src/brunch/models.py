@@ -363,6 +363,106 @@ class ForeachReport(BaseModel):
         return any(a.action in ("failed", "error") for a in self.actions)
 
 
+# --- set-level aggregates (M5) --------------------------------------------
+
+
+class SetStatus(BaseModel):
+    set_name: str
+    set_path: Path
+    description: str | None = None
+    members: list[WorkspaceStatus] = Field(default_factory=list)
+
+
+class SetFsckReport(BaseModel):
+    set_name: str
+    set_path: Path
+    members: list[FsckReport] = Field(default_factory=list)
+
+    @property
+    def has_errors(self) -> bool:
+        return any(m.has_errors for m in self.members)
+
+    @property
+    def has_warnings(self) -> bool:
+        return any(m.has_warnings for m in self.members)
+
+
+class SetFetchReport(BaseModel):
+    set_name: str
+    set_path: Path
+    members: list[FetchReport] = Field(default_factory=list)
+    dry_run: bool = False
+
+    @property
+    def has_errors(self) -> bool:
+        return any(m.has_errors for m in self.members)
+
+
+class SetPullReport(BaseModel):
+    set_name: str
+    set_path: Path
+    members: list[PullReport] = Field(default_factory=list)
+    dry_run: bool = False
+
+    @property
+    def has_errors(self) -> bool:
+        return any(m.has_errors for m in self.members)
+
+
+class SetRebaseReport(BaseModel):
+    set_name: str
+    set_path: Path
+    members: list[RebaseReport] = Field(default_factory=list)
+    dry_run: bool = False
+
+    @property
+    def has_errors(self) -> bool:
+        return any(m.has_errors for m in self.members)
+
+    @property
+    def has_conflicts(self) -> bool:
+        return any(m.has_conflicts for m in self.members)
+
+
+class SetForeachReport(BaseModel):
+    set_name: str
+    set_path: Path
+    command: list[str]
+    members: list[ForeachReport] = Field(default_factory=list)
+    dry_run: bool = False
+
+    @property
+    def has_errors(self) -> bool:
+        return any(m.has_errors for m in self.members)
+
+
+SetRmActionType = Literal[
+    "removed",
+    "partial",
+    "would_remove",
+    "refused",
+    "no_op",
+    "error",
+]
+
+
+class SetRmOutcome(BaseModel):
+    """Aggregate outcome of `brunch rm` at a set root."""
+
+    set_name: str
+    set_path: Path
+    action: SetRmActionType
+    members: list[RmOutcome] = Field(default_factory=list)
+    preserved: list[Path] = Field(default_factory=list)
+    archive_path: Path | None = None
+    forced: bool = False
+    dry_run: bool = False
+
+    @property
+    def has_risks(self) -> bool:
+        return any(m.has_risks for m in self.members)
+
+
 # --- rm (M4) ---------------------------------------------------------------
 
 

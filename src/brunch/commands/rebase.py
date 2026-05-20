@@ -8,8 +8,9 @@ import typer
 
 from brunch.config import load_config
 from brunch.paths import discover_workspace
-from brunch.rendering import render_rebase_report
+from brunch.rendering import render_rebase_report, render_set_rebase_report
 from brunch.services.rebase import rebase_workspace
+from brunch.services.set_ops import rebase_set
 
 
 def rebase(
@@ -25,7 +26,7 @@ def rebase(
         None,
         "-w",
         "--workspace",
-        help="Operate on the workspace at this path (default: walk up from cwd).",
+        help="Operate on the workspace (or set) at this path (default: walk up from cwd).",
     ),
     json_output: bool = typer.Option(False, "--json", help="Emit JSON instead of text."),
     dry_run: bool = typer.Option(
@@ -36,6 +37,25 @@ def rebase(
 
     location = discover_workspace(workspace or Path.cwd())
     cfg = load_config()
+
+    if location.mode == "set":
+        set_report = rebase_set(
+            location,
+            cfg,
+            onto=onto,
+            autostash=autostash,
+            no_fetch=no_fetch,
+            continue_on_error=continue_on_error,
+            dry_run=dry_run,
+        )
+        if json_output:
+            typer.echo(set_report.model_dump_json(indent=2))
+        else:
+            render_set_rebase_report(set_report)
+        if set_report.has_errors or set_report.has_conflicts:
+            raise typer.Exit(code=1)
+        return
+
     report = rebase_workspace(
         location,
         cfg,
@@ -45,11 +65,9 @@ def rebase(
         continue_on_error=continue_on_error,
         dry_run=dry_run,
     )
-
     if json_output:
         typer.echo(report.model_dump_json(indent=2))
     else:
         render_rebase_report(report)
-
     if report.has_errors or report.has_conflicts:
         raise typer.Exit(code=1)

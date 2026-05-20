@@ -22,6 +22,13 @@ from brunch.models import (
     RebaseReport,
     RepoStatus,
     RmOutcome,
+    SetFetchReport,
+    SetForeachReport,
+    SetFsckReport,
+    SetPullReport,
+    SetRebaseReport,
+    SetRmOutcome,
+    SetStatus,
     SyncReport,
     WorkspaceStatus,
 )
@@ -149,6 +156,192 @@ def render_fsck_report(report: FsckReport, *, console: Console | None = None) ->
 
 def _s(n: int) -> str:
     return "" if n == 1 else "s"
+
+
+# --- set-level renderers ---------------------------------------------------
+
+
+def _set_header(
+    *,
+    console: Console,
+    title: str,
+    name: str,
+    path: Path,
+    n_members: int,
+    extra: str | None = None,
+    dry_run: bool = False,
+) -> None:
+    prefix = "[dim](dry-run)[/dim] " if dry_run else ""
+    console.print(f"{prefix}[bold]{title}[/bold]  {name}")
+    console.print(f"        [bold]path[/bold]  {path}")
+    console.print(f"        [bold]members[/bold]  {n_members}")
+    if extra:
+        console.print(f"        [bold]{extra}[/bold]")
+
+
+def _render_member_separator(console: Console, member_name: str, member_path: Path) -> None:
+    console.print(f"\n[bold cyan]── {member_name}[/bold cyan] [dim]({member_path})[/dim]")
+
+
+def render_set_status(report: SetStatus, *, console: Console | None = None) -> None:
+    console = console or Console()
+    _set_header(
+        console=console,
+        title="set",
+        name=report.set_name,
+        path=report.set_path,
+        n_members=len(report.members),
+    )
+    if report.description:
+        console.print(f"        [bold]about[/bold]  {report.description}")
+    if not report.members:
+        console.print("\n[dim](no member workspaces)[/dim]")
+        return
+    for member in report.members:
+        _render_member_separator(console, member.workspace_name, member.workspace_path)
+        render_workspace_status(member, console=console)
+
+
+def render_set_fsck_report(report: SetFsckReport, *, console: Console | None = None) -> None:
+    console = console or Console()
+    _set_header(
+        console=console,
+        title="set fsck",
+        name=report.set_name,
+        path=report.set_path,
+        n_members=len(report.members),
+    )
+    if not report.members:
+        console.print("\n[dim](no member workspaces)[/dim]")
+        return
+    for member in report.members:
+        _render_member_separator(console, member.workspace_name, member.workspace_path)
+        render_fsck_report(member, console=console)
+
+
+def render_set_fetch_report(report: SetFetchReport, *, console: Console | None = None) -> None:
+    console = console or Console()
+    _set_header(
+        console=console,
+        title="set fetch",
+        name=report.set_name,
+        path=report.set_path,
+        n_members=len(report.members),
+        dry_run=report.dry_run,
+    )
+    for member in report.members:
+        _render_member_separator(console, member.workspace_name, member.workspace_path)
+        render_fetch_report(member, console=console)
+
+
+def render_set_pull_report(report: SetPullReport, *, console: Console | None = None) -> None:
+    console = console or Console()
+    _set_header(
+        console=console,
+        title="set pull",
+        name=report.set_name,
+        path=report.set_path,
+        n_members=len(report.members),
+        dry_run=report.dry_run,
+    )
+    for member in report.members:
+        _render_member_separator(console, member.workspace_name, member.workspace_path)
+        render_pull_report(member, console=console)
+
+
+def render_set_rebase_report(report: SetRebaseReport, *, console: Console | None = None) -> None:
+    console = console or Console()
+    _set_header(
+        console=console,
+        title="set rebase",
+        name=report.set_name,
+        path=report.set_path,
+        n_members=len(report.members),
+        dry_run=report.dry_run,
+    )
+    for member in report.members:
+        _render_member_separator(console, member.workspace_name, member.workspace_path)
+        render_rebase_report(member, console=console)
+
+
+def render_set_foreach_report(report: SetForeachReport, *, console: Console | None = None) -> None:
+    console = console or Console()
+    _set_header(
+        console=console,
+        title="set foreach",
+        name=report.set_name,
+        path=report.set_path,
+        n_members=len(report.members),
+        extra=f"command  {report.command}",
+        dry_run=report.dry_run,
+    )
+    for member in report.members:
+        _render_member_separator(console, member.workspace_name, member.workspace_path)
+        render_foreach_report(member, console=console)
+
+
+def render_set_rm_outcome(outcome: SetRmOutcome, *, console: Console | None = None) -> None:
+    console = console or Console()
+    prefix = "[dim](dry-run)[/dim] " if outcome.dry_run else ""
+    console.print(f"{prefix}[bold]set rm[/bold]  {outcome.set_name}")
+    console.print(f"        [bold]path[/bold]  {outcome.set_path}")
+
+    if outcome.action == "refused":
+        console.print("\n[red]refused[/red]: one or more member workspaces would refuse:\n")
+        for member in outcome.members:
+            if member.action != "refused":
+                continue
+            console.print(
+                f"  [yellow]{member.workspace_name}[/yellow]  [dim]({member.workspace_path})[/dim]"
+            )
+            for r in member.risks:
+                bits: list[str] = []
+                if r.has_uncommitted:
+                    bits.append("uncommitted")
+                if r.has_untracked:
+                    bits.append("untracked")
+                if r.unpushed_commits > 0 and not r.no_upstream:
+                    bits.append(f"{r.unpushed_commits} unpushed commit(s)")
+                if r.no_upstream:
+                    bits.append(f"{r.unpushed_commits} local-only commit(s) (no upstream)")
+                joined = ", ".join(bits) or "unknown"
+                console.print(f"      {r.short_name}: {joined}")
+        console.print(
+            "\n[dim]hint:[/dim] clean up the listed worktrees, or pass "
+            "[bold]--force[/bold] to archive the whole set first."
+        )
+        return
+
+    for member in outcome.members:
+        _render_member_separator(console, member.workspace_name, member.workspace_path)
+        render_rm_outcome(member, console=console)
+
+    if outcome.archive_path is not None:
+        verb = "would archive" if outcome.dry_run else "[green]archived[/green]"
+        console.print(f"\n  {verb} to {outcome.archive_path}")
+
+    if outcome.preserved:
+        count = len(outcome.preserved)
+        noun = "item" if count == 1 else "items"
+        verb = "would preserve" if outcome.dry_run else "preserved"
+        console.print(
+            f"\n  [yellow]{verb} {count} non-manifest {noun}[/yellow] at the "
+            f"set root {outcome.set_path}:"
+        )
+        for p in outcome.preserved:
+            console.print(f"    - {p.name}")
+
+    if outcome.action == "removed":
+        console.print(f"\n[green]removed set[/green] {outcome.set_path}")
+    elif outcome.action == "would_remove":
+        console.print(f"\n[dim]would remove set[/dim] {outcome.set_path}")
+    elif outcome.action == "partial":
+        console.print(f"\n[yellow]set dir preserved[/yellow] at {outcome.set_path}")
+        console.print(
+            "[dim]hint:[/dim] brunch only deletes what manifests declare; "
+            "review the items above and `rm -rf <path>` manually if you "
+            "really want everything gone."
+        )
 
 
 def render_sync_report(report: SyncReport, *, console: Console | None = None) -> None:

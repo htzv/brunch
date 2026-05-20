@@ -174,6 +174,53 @@ items listed. To fully clean up afterwards, review the preserved items
 and `rm -rf <workspace>` manually if you really want them gone. See
 [`initial-design.md §7.5`](initial-design.md) for the full contract.
 
+## Workspace sets
+
+When a task is broad enough to span multiple workspaces — a shape-up cycle's
+subtasks, a refactor that hops between teams, an agent exploring related
+threads — group them under a workspace **set**. A set is a directory with a
+`brunch-set.toml` marker; its members are direct child workspaces.
+
+```bash
+brunch init 2026-Q2_billing-overhaul --set      # creates the set directory + marker
+cd 2026-Q2_billing-overhaul
+brunch init task-1234-api -t kybernetix-fullstack     # member workspace
+brunch init task-1235-dashboard -t kybernetix-fullstack
+```
+
+You now have:
+
+```
+2026-Q2_billing-overhaul/
+├── brunch-set.toml
+├── task-1234-api/
+│   ├── brunch.toml
+│   └── …worktrees…
+└── task-1235-dashboard/
+    ├── brunch.toml
+    └── …worktrees…
+```
+
+From the set root, every command fans out across all members:
+
+```bash
+brunch status            # aggregated per-member status
+brunch fsck              # per-member health checks
+brunch fetch / pull      # fan out fetches/pulls across all repos of all members
+brunch rebase            # per-member rebase semantics
+brunch foreach -- pytest # run a command in every repo of every member
+brunch rm --force        # single set-level archive, then per-member removal
+```
+
+`brunch add` and `brunch sync` are workspace-only — at the set root they
+error with a clear message asking you to cd into a child or pass `-w
+<path>`.
+
+The deletion safety contract from §6 extends to the set root: members
+that end up `partial` (because they had unknown content) survive, and
+their dirs are preserved at the set level too. Unknown content at the
+set root (notes, scratch files) is also preserved.
+
 ## Shortcut: workspace from a template
 
 Templates live as plain TOML files at `~/.config/brunch/templates/<id>.toml`.
