@@ -174,6 +174,38 @@ items listed. To fully clean up afterwards, review the preserved items
 and `rm -rf <workspace>` manually if you really want them gone. See
 [`initial-design.md §7.5`](initial-design.md) for the full contract.
 
+## Bringing an existing folder under brunch
+
+Already have a folder of worktrees you assembled by hand? Adopt it:
+
+```bash
+cd ~/repos/kybernetix.example/tasks/tech-1796-tweaks
+brunch adopt                  # adopts cwd; workspace name = directory name
+brunch adopt --dry-run        # preview the inferred manifest first
+brunch adopt /path/to/folder  # adopt a specific path
+brunch init <name> --adopt -p <parent>   # synonym
+```
+
+What adopt does, concretely:
+
+1. Walks the direct children of the target. For each subdir whose `.git`
+   is a *file* (worktree marker, not a regular clone), it reads the gitdir
+   pointer to find the canonical clone, reverse-resolves the canonical
+   against your configured `root` to recover `<forge>/<org>/<repo>`, and
+   reads the worktree's current branch.
+2. Writes `brunch.toml` listing each discovered repo. `base` is defaulted
+   to `"main"` for every entry — review and edit if your worktrees were
+   branched off something else.
+3. Runs `brunch sync` and `brunch fsck` against the new manifest to
+   confirm everything looks right. Both should be clean immediately
+   after adoption.
+
+Adopt is conservative: any per-worktree problem (canonical outside the
+configured root, broken gitdir pointer, detached HEAD, duplicate short
+name) aborts the whole adoption with a clear error. `brunch.toml` is
+never written in that case. Sibling files/dirs that aren't worktrees are
+silently left in place — adopt only ever creates one file.
+
 ## Workspace sets
 
 When a task is broad enough to span multiple workspaces — a shape-up cycle's

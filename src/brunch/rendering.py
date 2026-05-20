@@ -14,6 +14,7 @@ from rich.table import Table
 
 from brunch.models import (
     AddOutcome,
+    AdoptOutcome,
     FetchReport,
     ForeachReport,
     FsckReport,
@@ -553,6 +554,65 @@ def render_rm_outcome(outcome: RmOutcome, *, console: Console | None = None) -> 
             "[dim]hint:[/dim] brunch only deletes what the manifest declares; "
             "review the items above and `rm -rf <path>` manually if you really "
             "want everything gone."
+        )
+
+
+def render_adopt_outcome(outcome: AdoptOutcome, *, console: Console | None = None) -> None:
+    """Render an :class:`AdoptOutcome`."""
+
+    console = console or Console()
+    prefix = "[dim](dry-run)[/dim] " if outcome.dry_run else ""
+    if outcome.action == "adopted":
+        verb = "[green]adopted[/green]"
+    elif outcome.action == "would_adopt":
+        verb = "would adopt"
+    else:
+        verb = "[red]failed[/red]"
+
+    console.print(f"{prefix}{verb} {outcome.name}")
+    console.print(f"        at {outcome.path}")
+
+    if outcome.discovered:
+        table = Table(show_header=True, header_style="bold", padding=(0, 1))
+        table.add_column("repo")
+        table.add_column("branch")
+        table.add_column("base")
+        for entry in outcome.discovered:
+            table.add_row(entry.repo, entry.branch, entry.base)
+        console.print()
+        console.print(table)
+
+    if outcome.skipped:
+        console.print("\n[dim]skipped:[/dim]")
+        for s in outcome.skipped:
+            console.print(f"  - {s.path.name}: {s.reason}")
+
+    if outcome.errors:
+        console.print(f"\n[red]{len(outcome.errors)} error(s) — nothing was written[/red]")
+        for e in outcome.errors:
+            console.print(f"  [red]{e.path.name}[/red]: {e.message}")
+            if e.hint:
+                console.print(f"      [dim]hint:[/dim] {e.hint}")
+
+    if outcome.action == "would_adopt":
+        console.print(
+            "\n[dim]review the inferred values above; `base` is defaulted to "
+            "'main' — edit brunch.toml after adoption if your worktrees were "
+            "branched off something else.[/dim]"
+        )
+        return
+
+    if outcome.action == "adopted":
+        if outcome.sync_report is not None:
+            console.print()
+            render_sync_report(outcome.sync_report, console=console)
+        if outcome.fsck_report is not None:
+            console.print()
+            render_fsck_report(outcome.fsck_report, console=console)
+        console.print(
+            "\n[dim]reminder:[/dim] `base` was defaulted to 'main' for every "
+            "repo. Edit brunch.toml if your worktrees were branched off "
+            "something else, and re-run `brunch fsck` to verify."
         )
 
 

@@ -463,6 +463,41 @@ class SetRmOutcome(BaseModel):
         return any(m.has_risks for m in self.members)
 
 
+# --- adopt -----------------------------------------------------------------
+
+
+class AdoptSkip(BaseModel):
+    """A direct child of the adoption target that was not adopted (and why)."""
+
+    path: Path
+    reason: str
+
+
+class AdoptError(BaseModel):
+    """A direct child that looked like a worktree but couldn't be adopted."""
+
+    path: Path
+    message: str
+    hint: str | None = None
+
+
+AdoptActionType = Literal["adopted", "would_adopt", "failed"]
+
+
+class AdoptOutcome(BaseModel):
+    """Result of ``brunch adopt`` (or ``brunch init --adopt``)."""
+
+    name: str
+    path: Path
+    action: AdoptActionType
+    discovered: list[RepoEntry] = Field(default_factory=list)
+    skipped: list[AdoptSkip] = Field(default_factory=list)
+    errors: list[AdoptError] = Field(default_factory=list)
+    sync_report: SyncReport | None = None
+    fsck_report: FsckReport | None = None
+    dry_run: bool = False
+
+
 # --- rm (M4) ---------------------------------------------------------------
 
 

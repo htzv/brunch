@@ -9,6 +9,7 @@ import typer
 from brunch import __version__
 from brunch.commands import (
     add,
+    adopt,
     fetch,
     foreach,
     fsck,
@@ -73,6 +74,10 @@ def main(
 # command it implements; ``_handle_errors`` translates BrunchError into clean
 # stderr output and stable exit codes.
 app.command("init", help="Create a new workspace (or set with --set).")(_handle_errors(init.init))
+app.command(
+    "adopt",
+    help="Retroactively bring an existing folder of worktrees under brunch.",
+)(_handle_errors(adopt.adopt))
 app.command("add", help="Add a repo to the current workspace; create its worktree.")(
     _handle_errors(add.add)
 )

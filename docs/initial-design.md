@@ -521,8 +521,6 @@ Each entry lists what else was on the table, why we chose what we chose, and wha
 These items are explicitly out of scope for v1 but expected to land in iteration 2 or later.
 
 ### Iteration 2 — niceties on top of a working v1
-
-- **`brunch init --adopt`** (or `brunch adopt`) — retroactively bring an existing folder of worktrees under brunch. Iterates direct children that look like worktrees (`<sub>/.git` is a file), reads each gitdir pointer to find the canonical, reverse-resolves it against the configured `root` to recover `<forge>/<org>/<repo>`, reads each worktree's current branch, defaults `base` to the branch's upstream-tracking branch short name (or `"main"`), writes `brunch.toml`, then runs `sync` + `fsck` to verify. Fails clearly if a worktree doesn't sit under the configured root.
 - **`brunch gc`** — walks the canonical-clone tree and runs `git worktree prune` on each, cleaning up dangling refs from deleted workspaces. Useful but not blocking; a `find … | xargs git -C … worktree prune` one-liner covers it for now.
 - **`brunch restore`** — natural inverse of `brunch rm --force`'s archive. Without it, the archive is mainly superstition. The pair is worth landing together.
 - **Pipe semantics** — `brunch inspect` emitting manifest TOML, `brunch apply --from-stdin` consuming it. This is what makes "pipe several brunch commands together" real.
@@ -566,5 +564,9 @@ The implementation proceeds in small, testable slices. Each milestone is roughly
 - **M3 — Cross-repo ops.** `fetch`, `pull`, `rebase`, `foreach`. *(Done.)*
 - **M4 — Safe teardown.** `rm` with the archive-on-force flow. *(Done.)*
 - **M5 — Set mode.** Walk-up discovery extended to `brunch-set.toml`; set-aware fanout for the existing commands; `fsck` recursion; structured-output polish across the board. *(Done.)*
+
+### Iteration 2 work landed so far
+
+- **`brunch adopt`** (and the `brunch init --adopt` synonym) — retroactively bring an existing folder of worktrees under brunch. Iterates direct children that look like worktrees (`<sub>/.git` is a file), reads each gitdir pointer to find the canonical, reverse-resolves it against the configured `root` to recover `<forge>/<org>/<repo>`, reads each worktree's current branch, writes `brunch.toml` (defaulting `base` to `"main"` for every repo — inferring it from upstream tracking is unreliable enough to be a footgun, and editing the manifest is cheap), then runs `sync` + `fsck` to verify. Conservative on failure: any per-worktree error aborts before anything is written. Fails clearly if a worktree doesn't sit under the configured root. *(Done.)*
 
 Iteration 2 and 3 follow as outlined in §13.
