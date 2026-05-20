@@ -62,12 +62,12 @@ Canonical clones live under a configurable root, organised by forge / org / repo
 <root>/<forge_id>/<organisation>/<repo>
 ```
 
-Default `root` is `~/repos/tw` (overridable). The convention matches [ghq](https://github.com/x-motemen/ghq), `GOPATH/src/<importpath>` before Go modules, and the broad "import-path style" used by many tools. It is **the** standard convention in this neighbourhood, so adopting it puts brunch on familiar ground for anyone who has used those tools.
+Default `root` is `~/repos/brunch` (overridable). The convention matches [ghq](https://github.com/x-motemen/ghq), `GOPATH/src/<importpath>` before Go modules, and the broad "import-path style" used by many tools. It is **the** standard convention in this neighbourhood, so adopting it puts brunch on familiar ground for anyone who has used those tools.
 
 Example:
 
 ```
-~/repos/tw/
+~/repos/brunch/
 ├── github.com/
 │   ├── acme/
 │   │   ├── api/         <-- canonical clone of github.com/acme/api
@@ -162,7 +162,7 @@ Future fields (iteration 2+): set-level defaults inherited by `brunch init` of c
 ### 4.3 Tool config — `~/.config/brunch/config.toml`
 
 ```toml
-root          = "~/repos/tw"
+root          = "~/repos/brunch"
 default_forge = "github.com"
 
 [forges.github_com]

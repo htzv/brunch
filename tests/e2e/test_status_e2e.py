@@ -41,7 +41,7 @@ def _setup_workspace(
     ghq-style path plus a worktree under the workspace directory.
     """
 
-    canonical_root = home / "repos" / "tw"
+    canonical_root = home / "repos" / "brunch"
     _config_with(home, root=canonical_root)
 
     ws = workspace_factory()

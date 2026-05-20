@@ -31,7 +31,7 @@ uv tool install .             # registers brunch and br on PATH
 
 - A **workspace** is a directory of co-located git worktrees, one per repo, with a `brunch.toml` manifest at its root.
 - A **workspace set** is a directory of workspaces, with a `brunch-set.toml` at its root.
-- Canonical clones live ghq-style under `<root>/<forge>/<org>/<repo>` (default root: `~/repos/tw`). brunch never clones — it expects clones to be there.
+- Canonical clones live ghq-style under `<root>/<forge>/<org>/<repo>` (default root: `~/repos/brunch`). brunch never clones — it expects clones to be there.
 - Operating mode (workspace vs set) is decided by walk-up discovery from `cwd`.
 
 See [`docs/initial-design.md`](docs/initial-design.md) for everything else.

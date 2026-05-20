@@ -82,7 +82,7 @@ class ToolConfig(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    root: Path = Field(default=Path("~/repos/tw"))
+    root: Path = Field(default=Path("~/repos/brunch"))
     default_forge: str = Field(default="github.com")
     forges: dict[str, ForgeConfig] = Field(default_factory=dict)
 

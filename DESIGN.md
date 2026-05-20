@@ -46,16 +46,16 @@ Besides these workspaces, as above, we also need to be able to create workspace 
 
 **CLI surface (rough first cut):**
 
-- `tw init <name> [--from <template_id>]` — create a new task workspace directory + empty manifest, optionally from a workspace template
-- `tw add <repo-source> [--branch X --base Y]` — add a repo to the current workspace's manifest and create its worktree
-- `tw sync` — make the on-disk worktrees match the manifest (create missing, warn on drift)
-- `tw status` — `git status` across all repos, summarized
-- `tw foreach <cmd>` — run a shell command in each repo (à la `mr run`)
-- `tw fetch` / `tw pull` — across all repos
-- `tw rm` — remove the workspace, properly pruning worktrees from the canonical clones
-- `tw list` — list known task workspaces (probably from a registry file in `~/.config/tw/`)
+- `brunch init <name> [--from <template_id>]` — create a new task workspace directory + empty manifest, optionally from a workspace template
+- `brunch add <repo-source> [--branch X --base Y]` — add a repo to the current workspace's manifest and create its worktree
+- `brunch sync` — make the on-disk worktrees match the manifest (create missing, warn on drift)
+- `brunch status` — `git status` across all repos, summarized
+- `brunch foreach <cmd>` — run a shell command in each repo (à la `mr run`)
+- `brunch fetch` / `brunch pull` — across all repos
+- `brunch rm` — remove the workspace, properly pruning worktrees from the canonical clones
+- `brunch list` — list known task workspaces (probably from a registry file in `~/.config/brunch/`)
 
-`--dry-run` switches throughout. Ability to get config on stdin and to output results to stdout so that different such commands could be piped together. Also maybe a command to archive a workspace or workspace set (also used before a `tw rm --force`, transparently, for an extra safety measure).
+`--dry-run` switches throughout. Ability to get config on stdin and to output results to stdout so that different such commands could be piped together. Also maybe a command to archive a workspace or workspace set (also used before a `brunch rm --force`, transparently, for an extra safety measure).
 
 The CLI surface for workspace sets should be similar, without adding too much complexity and special cases or verbosity.
 
@@ -73,13 +73,13 @@ Maybe a main catalogue with canonical clones of key repos from the GH organizati
 
 Branches with optional pinning.
 
-4. Registry of workspaces: file in `~/.config/tw/`? Or just "any directory with a `tw.toml` is a workspace" with no central registry?
+4. Registry of workspaces: file in `~/.config/brunch/`? Or just "any directory with a `brunch.toml` is a workspace" with no central registry?
 
-I'd go for `~/.config/tw/`.
+I'd go for `~/.config/brunch/`.
 
-5. How to handle `tw rm` safely when there are uncommitted changes or unpushed commits in any of the worktrees.
+5. How to handle `brunch rm` safely when there are uncommitted changes or unpushed commits in any of the worktrees.
 
-Forbid. Expose a `tw rm --force` option that bypasses the safety checks, but always takes an archive of everything first (e.g. in `~/.local/share/tw/archives/`).
+Forbid. Expose a `brunch rm --force` option that bypasses the safety checks, but always takes an archive of everything first (e.g. in `~/.local/share/brunch/archives/`).
 
 ## What I'd like from you
 

@@ -14,7 +14,7 @@ class TestLoadConfig:
         cfg = load_config(tmp_path / "no-such.toml")
         assert isinstance(cfg, ToolConfig)
         assert cfg.default_forge == "github.com"
-        assert cfg.root == Path("~/repos/tw")
+        assert cfg.root == Path("~/repos/brunch")
         assert cfg.forges == {}
 
     def test_loads_full_config(self, tmp_path: Path) -> None:

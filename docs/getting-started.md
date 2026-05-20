@@ -40,7 +40,7 @@ already exist on disk, laid out **ghq-style**:
 <root>/<forge_id>/<organisation>/<repo>
 ```
 
-The default `<root>` is `~/repos/tw`. Override via
+The default `<root>` is `~/repos/brunch`. Override via
 `~/.config/brunch/config.toml`:
 
 ```toml

@@ -26,7 +26,7 @@ def _setup_clean(
     make_workspace: Callable[..., Path],
     worktree_factory: Callable[..., None],
 ) -> Path:
-    canonical_root = home / "repos" / "tw"
+    canonical_root = home / "repos" / "brunch"
     _config_with(home, root=canonical_root)
     api_canonical = canonical_root / "github.com" / "acme" / "api"
     api_canonical.parent.mkdir(parents=True)
