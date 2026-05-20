@@ -25,11 +25,13 @@ def test_version_flag() -> None:
     assert __version__ in result.stdout
 
 
-def test_help_lists_all_v1_commands() -> None:
-    result = runner.invoke(app, ["--help"])
-    assert result.exit_code == 0
+def test_all_v1_commands_registered() -> None:
+    # Inspect Typer's registered_commands rather than parsing `--help` stdout —
+    # the rendered help depends on Rich's panel rendering and varies with
+    # terminal width across environments (locally vs CI).
     expected = {
         "init",
+        "adopt",
         "add",
         "sync",
         "status",
@@ -40,8 +42,15 @@ def test_help_lists_all_v1_commands() -> None:
         "rm",
         "fsck",
     }
-    missing = expected - set(result.stdout.split())
-    assert not missing, f"missing commands in --help: {missing}"
+    registered = {c.name for c in app.registered_commands}
+    missing = expected - registered
+    assert not missing, f"missing commands in app: {missing}"
+
+
+def test_help_runs_cleanly() -> None:
+    # Belt-and-suspenders: the help output must at least render without error.
+    result = runner.invoke(app, ["--help"])
+    assert result.exit_code == 0
 
 
 def test_stub_commands_exit_2() -> None:
