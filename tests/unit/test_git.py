@@ -12,6 +12,7 @@ from brunch.git import (
     _parse_worktree_list,
     add_worktree,
     branch_exists,
+    count_commits_ahead_of,
     current_branch,
     fetch,
     get_status,
@@ -23,6 +24,7 @@ from brunch.git import (
     remove_worktree,
     rev_parse_verify,
     worktree_list,
+    worktree_prune,
 )
 
 
@@ -235,6 +237,73 @@ class TestRemoveWorktree:
         # Without force, git would refuse.
         remove_worktree(repo, target, force=True)
         assert not target.exists()
+
+
+class TestCountCommitsAheadOf:
+    def test_zero_when_no_extra_commits(
+        self,
+        make_canonical: Callable[..., Path],
+        tmp_path: Path,
+        worktree_factory: Callable[..., None],
+    ) -> None:
+        repo = make_canonical()
+        wt = tmp_path / "wt"
+        worktree_factory(repo, wt, branch="feat", base="main")
+        assert count_commits_ahead_of(wt, "main") == 0
+
+    def test_counts_local_commits(
+        self,
+        make_canonical: Callable[..., Path],
+        tmp_path: Path,
+        worktree_factory: Callable[..., None],
+    ) -> None:
+        repo = make_canonical()
+        wt = tmp_path / "wt"
+        worktree_factory(repo, wt, branch="feat", base="main")
+        import subprocess
+
+        for i in range(3):
+            (wt / f"f{i}.txt").write_text(f"{i}\n", encoding="utf-8")
+            subprocess.run(["git", "add", "."], cwd=wt, check=True, capture_output=True)
+            subprocess.run(
+                ["git", "commit", "-m", f"c{i}"],
+                cwd=wt,
+                check=True,
+                capture_output=True,
+            )
+        assert count_commits_ahead_of(wt, "main") == 3
+
+    def test_unknown_base_returns_zero(
+        self,
+        make_canonical: Callable[..., Path],
+        tmp_path: Path,
+        worktree_factory: Callable[..., None],
+    ) -> None:
+        repo = make_canonical()
+        wt = tmp_path / "wt"
+        worktree_factory(repo, wt, branch="feat", base="main")
+        assert count_commits_ahead_of(wt, "no-such-branch") == 0
+
+
+class TestWorktreePrune:
+    def test_prunes_dangling_refs(
+        self,
+        make_canonical: Callable[..., Path],
+        tmp_path: Path,
+        worktree_factory: Callable[..., None],
+    ) -> None:
+        import shutil
+
+        repo = make_canonical()
+        wt = tmp_path / "wt"
+        worktree_factory(repo, wt, branch="orphan", base="main")
+        shutil.rmtree(wt)
+        # Before prune, the canonical still has a ref pointing at the gone path.
+        before = {w.path for w in worktree_list(repo)}
+        assert wt in before
+        worktree_prune(repo)
+        after = {w.path for w in worktree_list(repo)}
+        assert wt not in after
 
 
 class TestRevParseVerify:

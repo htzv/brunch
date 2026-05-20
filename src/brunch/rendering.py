@@ -21,6 +21,7 @@ from brunch.models import (
     PullReport,
     RebaseReport,
     RepoStatus,
+    RmOutcome,
     SyncReport,
     WorkspaceStatus,
 )
@@ -57,6 +58,12 @@ _FOREACH_ACTION_STYLE = {
     "failed": "red",
     "skipped": "dim",
     "would_run": "cyan",
+    "error": "red",
+}
+_RM_REPO_ACTION_STYLE = {
+    "removed": "green",
+    "skipped": "dim",
+    "would_remove": "cyan",
     "error": "red",
 }
 
@@ -290,6 +297,53 @@ def render_foreach_report(report: ForeachReport, *, console: Console | None = No
         )
         if a.message:
             console.print(f"             {a.message}")
+
+
+def render_rm_outcome(outcome: RmOutcome, *, console: Console | None = None) -> None:
+    """Render an :class:`RmOutcome`."""
+
+    console = console or Console()
+    prefix = "[dim](dry-run)[/dim] " if outcome.dry_run else ""
+    console.print(f"{prefix}[bold]rm[/bold]  {outcome.workspace_name}")
+    console.print(f"    [bold]path[/bold]  {outcome.workspace_path}")
+
+    if outcome.action == "refused":
+        console.print("\n[red]refused[/red]: workspace has at-risk repos:\n")
+        for r in outcome.risks:
+            bits: list[str] = []
+            if r.has_uncommitted:
+                bits.append("uncommitted changes")
+            if r.has_untracked:
+                bits.append("untracked files")
+            if r.unpushed_commits > 0 and not r.no_upstream:
+                bits.append(f"{r.unpushed_commits} unpushed commit(s)")
+            if r.no_upstream:
+                bits.append(f"{r.unpushed_commits} local-only commit(s) (no upstream)")
+            joined = ", ".join(bits) or "unknown"
+            console.print(f"  [yellow]{r.short_name}[/yellow]  [dim]({r.repo})[/dim]")
+            console.print(f"           {joined}")
+        console.print(
+            "\n[dim]hint:[/dim] commit/push/clean the worktrees, or pass [bold]--force[/bold] "
+            "to archive everything first."
+        )
+        return
+
+    if outcome.repo_actions:
+        console.print()
+        for a in outcome.repo_actions:
+            style = _RM_REPO_ACTION_STYLE.get(a.action, "white")
+            label = a.action.upper().replace("_", " ")
+            console.print(f"  [{style}]{label:<13}[/{style}] {a.short_name}  [dim]({a.repo})[/dim]")
+            console.print(f"                {a.message}")
+
+    if outcome.archive_path is not None:
+        verb = "would archive" if outcome.dry_run else "[green]archived[/green]"
+        console.print(f"\n  {verb} to {outcome.archive_path}")
+
+    if outcome.action == "removed":
+        console.print(f"\n[green]removed workspace[/green] {outcome.workspace_path}")
+    elif outcome.action == "would_remove":
+        console.print(f"\n[dim]would remove workspace[/dim] {outcome.workspace_path}")
 
 
 def render_init_outcome(outcome: InitOutcome, *, console: Console | None = None) -> None:

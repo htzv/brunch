@@ -76,6 +76,8 @@ def _parse_porcelain_v2(text: str) -> GitStatus:
             head = line.removeprefix("# branch.head ").strip()
             # Detached HEAD is rendered as "(detached)".
             status.branch = None if head == "(detached)" else head
+        elif line.startswith("# branch.upstream "):
+            status.upstream = line.removeprefix("# branch.upstream ").strip()
         elif line.startswith("# branch.ab "):
             # `# branch.ab +<ahead> -<behind>`
             parts = line.removeprefix("# branch.ab ").split()
@@ -192,6 +194,29 @@ def rebase(
     else:
         args.append(target)
     _run(args, cwd=path)
+
+
+def count_commits_ahead_of(path: Path, base: str) -> int:
+    """Count commits in HEAD that are not reachable from ``base``.
+
+    Returns 0 if ``base`` cannot be resolved or any other error occurs;
+    callers that need to distinguish "no ahead commits" from "base
+    unknown" should check ``rev_parse_verify`` first.
+    """
+
+    result = _run(["rev-list", "--count", "HEAD", f"^{base}"], cwd=path, check=False)
+    if result.returncode != 0:
+        return 0
+    try:
+        return int(result.stdout.strip() or "0")
+    except ValueError:
+        return 0
+
+
+def worktree_prune(canonical: Path) -> None:
+    """Run ``git worktree prune`` against ``canonical``."""
+
+    _run(["worktree", "prune"], cwd=canonical)
 
 
 def rebase_in_progress(path: Path) -> bool:

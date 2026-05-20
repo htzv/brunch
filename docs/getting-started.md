@@ -151,12 +151,19 @@ worktree references; for now it's a no-op notice.
 ### 6. Tear down
 
 ```bash
-brunch rm                # M4 — refuses if anything is dirty
-brunch rm --force        # M4 — archives to ~/.local/share/brunch/archives/ first
+brunch rm                # refuses if any worktree is dirty or has unpushed work
+brunch rm --dry-run      # show what would be removed
+brunch rm --force        # archive everything first, then remove
 ```
 
-(M4 is next; until then, `rm -rf task-1234-billing-flow/` plus
-`git -C <canonical> worktree prune` does the job.)
+`brunch rm` walks each repo in the manifest, asks git to remove each
+worktree, then `rmtree`s the workspace directory. Branches are left in
+the canonical clones — worktrees are cheap to recreate.
+
+With `--force`, the entire workspace directory is archived to
+`~/.local/share/brunch/archives/<name>-<UTC-timestamp>.tar.gz` *before*
+any destructive action — if you removed something you needed back, just
+untar the archive.
 
 ## Shortcut: workspace from a template
 

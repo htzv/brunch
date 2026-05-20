@@ -16,9 +16,7 @@ from brunch.cli import app
 runner = CliRunner()
 
 
-STUB_COMMANDS = [
-    ("rm", []),
-]
+STUB_COMMANDS: list[tuple[str, list[str]]] = []
 
 
 def test_version_flag() -> None:
@@ -59,7 +57,7 @@ def test_workspace_aware_commands_fail_cleanly_outside_a_workspace(tmp_path: Pat
     # All workspace-scoped commands need a workspace context. Outside one
     # they raise WorkspaceNotFoundError, which the global error handler
     # converts to exit code 3.
-    for cmd in ["status", "fsck", "sync", "fetch", "pull", "rebase"]:
+    for cmd in ["status", "fsck", "sync", "fetch", "pull", "rebase", "rm"]:
         result = runner.invoke(app, [cmd, "-w", str(tmp_path)])
         assert result.exit_code == 3, f"{cmd}: expected exit 3, got {result.exit_code}"
     result = runner.invoke(app, ["add", "acme/api", "-w", str(tmp_path)])

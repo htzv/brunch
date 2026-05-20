@@ -110,6 +110,7 @@ class GitStatus(BaseModel):
     """Raw status of a single git working tree (output of `git status v2`)."""
 
     branch: str | None = None  # None == detached HEAD
+    upstream: str | None = None  # None == no upstream configured
     ahead: int = 0
     behind: int = 0
     has_uncommitted: bool = False
@@ -360,3 +361,58 @@ class ForeachReport(BaseModel):
     @property
     def has_errors(self) -> bool:
         return any(a.action in ("failed", "error") for a in self.actions)
+
+
+# --- rm (M4) ---------------------------------------------------------------
+
+
+class RmRisk(BaseModel):
+    """A per-repo reason a workspace shouldn't be removed without --force."""
+
+    repo: str
+    short_name: str
+    has_uncommitted: bool = False
+    has_untracked: bool = False
+    unpushed_commits: int = 0
+    no_upstream: bool = False
+
+    @property
+    def is_at_risk(self) -> bool:
+        return (
+            self.has_uncommitted
+            or self.has_untracked
+            or self.unpushed_commits > 0
+            or self.no_upstream
+        )
+
+
+RmRepoActionType = Literal["removed", "skipped", "would_remove", "error"]
+
+
+class RmRepoAction(BaseModel):
+    """Per-repo outcome of the removal pass."""
+
+    repo: str
+    short_name: str
+    action: RmRepoActionType
+    message: str
+
+
+RmActionType = Literal["removed", "would_remove", "refused", "no_op", "error"]
+
+
+class RmOutcome(BaseModel):
+    """Aggregate outcome of `brunch rm`."""
+
+    workspace_name: str
+    workspace_path: Path
+    action: RmActionType
+    risks: list[RmRisk] = Field(default_factory=list)
+    repo_actions: list[RmRepoAction] = Field(default_factory=list)
+    archive_path: Path | None = None
+    forced: bool = False
+    dry_run: bool = False
+
+    @property
+    def has_risks(self) -> bool:
+        return any(r.is_at_risk for r in self.risks)
