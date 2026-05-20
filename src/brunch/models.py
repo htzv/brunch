@@ -398,17 +398,32 @@ class RmRepoAction(BaseModel):
     message: str
 
 
-RmActionType = Literal["removed", "would_remove", "refused", "no_op", "error"]
+RmActionType = Literal[
+    "removed",
+    "partial",
+    "would_remove",
+    "refused",
+    "no_op",
+    "error",
+]
 
 
 class RmOutcome(BaseModel):
-    """Aggregate outcome of `brunch rm`."""
+    """Aggregate outcome of `brunch rm`.
+
+    ``preserved`` lists direct children of the workspace root that were left
+    intact because they were not declared in the manifest. When this list is
+    non-empty the action is ``partial``: the workspace dir itself was not
+    removed, and ``brunch.toml`` was left in place so a future ``sync`` /
+    ``rm`` can re-engage.
+    """
 
     workspace_name: str
     workspace_path: Path
     action: RmActionType
     risks: list[RmRisk] = Field(default_factory=list)
     repo_actions: list[RmRepoAction] = Field(default_factory=list)
+    preserved: list[Path] = Field(default_factory=list)
     archive_path: Path | None = None
     forced: bool = False
     dry_run: bool = False

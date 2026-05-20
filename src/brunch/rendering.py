@@ -340,10 +340,27 @@ def render_rm_outcome(outcome: RmOutcome, *, console: Console | None = None) -> 
         verb = "would archive" if outcome.dry_run else "[green]archived[/green]"
         console.print(f"\n  {verb} to {outcome.archive_path}")
 
+    if outcome.preserved:
+        count = len(outcome.preserved)
+        noun = "item" if count == 1 else "items"
+        verb = "would preserve" if outcome.dry_run else "preserved"
+        console.print(
+            f"\n  [yellow]{verb} {count} non-manifest {noun}[/yellow] in {outcome.workspace_path}:"
+        )
+        for p in outcome.preserved:
+            console.print(f"    - {p.name}")
+
     if outcome.action == "removed":
         console.print(f"\n[green]removed workspace[/green] {outcome.workspace_path}")
     elif outcome.action == "would_remove":
         console.print(f"\n[dim]would remove workspace[/dim] {outcome.workspace_path}")
+    elif outcome.action == "partial":
+        console.print(f"\n[yellow]workspace dir preserved[/yellow] at {outcome.workspace_path}")
+        console.print(
+            "[dim]hint:[/dim] brunch only deletes what the manifest declares; "
+            "review the items above and `rm -rf <path>` manually if you really "
+            "want everything gone."
+        )
 
 
 def render_init_outcome(outcome: InitOutcome, *, console: Console | None = None) -> None:

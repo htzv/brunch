@@ -165,6 +165,15 @@ With `--force`, the entire workspace directory is archived to
 any destructive action — if you removed something you needed back, just
 untar the archive.
 
+**Safety contract.** brunch only ever deletes its own marker file
+(`brunch.toml`), the worktrees declared in it, and the workspace
+directory itself — and only if it ends up empty. Anything else under
+the workspace root (sibling dirs, dotfiles, nested git repos, symlinks)
+is preserved; the outcome is reported as `partial` with the surviving
+items listed. To fully clean up afterwards, review the preserved items
+and `rm -rf <workspace>` manually if you really want them gone. See
+[`initial-design.md §7.5`](initial-design.md) for the full contract.
+
 ## Shortcut: workspace from a template
 
 Templates live as plain TOML files at `~/.config/brunch/templates/<id>.toml`.

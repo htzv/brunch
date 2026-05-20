@@ -329,6 +329,20 @@ For each repo in the workspace (or each workspace in the set):
 
 The archive is a "fat" tarball of the workspace directory — simple, complete, slightly larger than necessary. A leaner format (manifest + per-repo `git bundle` of unpushed commits + uncommitted diffs) is a possible later refinement when archive size starts mattering.
 
+#### Deletion safety contract
+
+brunch only ever deletes things it knows it owns. The contract:
+
+1. **Marker file.** `brunch.toml` is deleted (only when the workspace is otherwise empty).
+2. **Manifest-declared worktrees.** Each `[[repo]]`'s subdir is removed via `git worktree remove` (with `--force` only when the user passed `--force`). Never `shutil.rmtree`.
+3. **The workspace directory itself**, only when (1)+(2) above leave it empty.
+
+Anything else under the workspace root — sibling directories, dotfiles, nested git repos, symlinks, files brunch never put there — is **preserved**. In that case the outcome is reported as `partial`: the workspace dir survives, `brunch.toml` is left alongside, and the preserved entries are listed in the rendered output (and in the `preserved` field of the JSON outcome). The user can then either review and remove manually, or `brunch sync`/`brunch rm` again later. `--force` does *not* override this contract; the archive captures the preserved content, so it's still recoverable if the user later decides to nuke the dir manually.
+
+Additional safety guards: brunch refuses to operate on the filesystem root, the user's home directory, or any other absolute path with two or fewer components. If `--force` is set and archive creation fails (disk full, permission denied), the removal is aborted before any worktree is touched.
+
+Reserved-name namespace: `.brunch/` is treated as brunch-owned so future state (e.g. lockfiles in iteration 3+) can be cleaned up automatically by `rm` without breaking the safety contract.
+
 ### 7.6 `brunch fsck`
 
 Per workspace (recurses through set members in set mode):
@@ -508,6 +522,7 @@ These items are explicitly out of scope for v1 but expected to land in iteration
 
 ### Iteration 2 — niceties on top of a working v1
 
+- **`brunch init --adopt`** (or `brunch adopt`) — retroactively bring an existing folder of worktrees under brunch. Iterates direct children that look like worktrees (`<sub>/.git` is a file), reads each gitdir pointer to find the canonical, reverse-resolves it against the configured `root` to recover `<forge>/<org>/<repo>`, reads each worktree's current branch, defaults `base` to the branch's upstream-tracking branch short name (or `"main"`), writes `brunch.toml`, then runs `sync` + `fsck` to verify. Fails clearly if a worktree doesn't sit under the configured root.
 - **`brunch gc`** — walks the canonical-clone tree and runs `git worktree prune` on each, cleaning up dangling refs from deleted workspaces. Useful but not blocking; a `find … | xargs git -C … worktree prune` one-liner covers it for now.
 - **`brunch restore`** — natural inverse of `brunch rm --force`'s archive. Without it, the archive is mainly superstition. The pair is worth landing together.
 - **Pipe semantics** — `brunch inspect` emitting manifest TOML, `brunch apply --from-stdin` consuming it. This is what makes "pipe several brunch commands together" real.
