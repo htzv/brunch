@@ -53,6 +53,19 @@ path = "src/brunch/__init__.py"
 [tool.hatch.build.targets.wheel]
 packages = ["src/brunch"]
 
+# --- uv ---------------------------------------------------------------------
+#
+# A 48-hour rolling cooldown on newly-published packages. Anything uploaded to
+# the index in the last two days is invisible to `uv lock`, so a compromised
+# or malicious release that's revoked within the typical detection window
+# never enters our lockfile.
+#
+# This is a rolling delta (not a fixed date): uv recomputes the cutoff at
+# every invocation. It does not affect already-locked versions in uv.lock —
+# only the resolution that produces them.
+[tool.uv]
+exclude-newer = "48 hours"
+
 [tool.ruff]
 line-length = 100
 target-version = "py311"
