@@ -1,0 +1,22 @@
+/* Make embedded asciinema casts breathe inside the Material content column. */
+.asciinema-player-wrapper {
+  margin: 1rem 0;
+  border-radius: 0.4rem;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+/* Each cast container starts as a plain div with data-cast and a fixed
+   aspect-friendly min-height so the page doesn't jitter while the player
+   bootstraps. */
+.brunch-cast {
+  min-height: 280px;
+}
+
+/* Side-by-side admonition that mirrors Typer's "tip" / "info" feel. */
+.md-typeset .admonition.brunch-tip {
+  border-left-color: #7e57c2;
+}
+.md-typeset .brunch-tip > .admonition-title {
+  background-color: rgba(126, 87, 194, 0.1);
+}

@@ -1,0 +1,93 @@
+site_name: brunch
+site_description: Mise en place for git worktree-based multi-repo task workspaces.
+site_url: https://htzv.github.io/brunch/
+repo_url: https://github.com/htzv/brunch
+repo_name: htzv/brunch
+edit_uri: edit/main/docs-site/
+
+docs_dir: docs-site
+
+theme:
+  name: material
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - navigation.tracking
+    - navigation.indexes
+    - content.code.copy
+    - content.code.annotate
+    - content.action.edit
+    - search.suggest
+    - search.highlight
+    - toc.follow
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: deep purple
+      accent: amber
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: deep purple
+      accent: amber
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  icon:
+    repo: fontawesome/brands/github
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.keys
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+extra_css:
+  - https://cdn.jsdelivr.net/npm/asciinema-player@3.10.0/dist/bundle/asciinema-player.css
+  - stylesheets/extra.css
+
+extra_javascript:
+  - https://cdn.jsdelivr.net/npm/asciinema-player@3.10.0/dist/bundle/asciinema-player.min.js
+  - scripts/asciinema-init.js
+
+nav:
+  - Home: index.md
+  - Walkthrough:
+      - walkthrough/index.md
+      - 0. Setup: walkthrough/00-setup.md
+      - 1. Create a workspace: walkthrough/01-create.md
+      - 2. Inspect: walkthrough/02-inspect.md
+      - 3. Hand off to Claude Code: walkthrough/03-claude-code.md
+      - 4. Verify: walkthrough/04-verify.md
+      - 5. Commit: walkthrough/05-commit.md
+      - 6. Push: walkthrough/06-push.md
+      - 7. Open PRs: walkthrough/07-pr.md
+      - 8. Tear down: walkthrough/08-teardown.md
+  - Reference:
+      - Getting started: ref/getting-started.md
+      - Functional design: ref/initial-design.md
+  - Recording the casts: recording.md
