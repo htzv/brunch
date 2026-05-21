@@ -6,7 +6,8 @@ name: docs
 # workflow does not record them. To refresh: run ./scripts/record-walkthrough.sh
 # locally and commit the resulting .cast files.
 #
-# Repo setup needed once: Settings → Pages → Source = "GitHub Actions".
+# Pages is auto-enabled on the first successful run via configure-pages'
+# `enablement: true` option. No manual repo setup needed.
 
 on:
   push:
@@ -33,6 +34,11 @@ jobs:
         with:
           enable-cache: true
       - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+        with:
+          # Enable Pages on first run if it isn't already; uses the workflow's
+          # pages:write permission. Removes the chicken-and-egg between
+          # "deploy needs Pages enabled" and "enabling Pages is a manual step".
+          enablement: true
       - name: install docs deps
         run: uv sync --extra docs
       - name: build site
