@@ -36,3 +36,7 @@ htmlcov/
 .DS_Store
 Thumbs.db
 /site/
+
+# Locally-installed dev tooling (asciinema binary fetched from upstream
+# GitHub releases by `./scripts/install-asciinema.sh`).
+/tools/
