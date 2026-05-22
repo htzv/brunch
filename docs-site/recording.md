@@ -29,7 +29,7 @@ change.
 
 ## Prerequisites
 
-- **`asciinema` 3.0+** — strictly required for `--cols`/`--rows`. The
+- **`asciinema` 3.0+** — strictly required for `--window-size`. The
   catch: asciinema 3.x is a Rust rewrite and **isn't on PyPI** (the
   series got abandoned at 2.4.0 in Aug 2023). `uv tool install
   asciinema` / `pipx install asciinema` / `pip install asciinema` all
@@ -90,7 +90,7 @@ an explicit beat.
 
 ### 2. Fixed terminal size
 
-`asciinema rec --cols 80 --rows 40` ignores the host terminal's actual
+`asciinema rec --window-size 80x40` ignores the host terminal's actual
 size and records a fixed 80×40 canvas. The asciinema-player on the
 docs site scales that to the page width, which looks good across
 viewports.

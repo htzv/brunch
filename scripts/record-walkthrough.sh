@@ -11,8 +11,8 @@
 #    illegible.
 #
 # 2. **Fixed terminal size.** Every cast is recorded at exactly 80×40 via
-#    asciinema's `--cols`/`--rows` flags, regardless of the host terminal
-#    size. Requires asciinema 3.0 or later.
+#    asciinema's `--window-size` flag, regardless of the host terminal size.
+#    Requires asciinema 3.0 or later.
 #
 # 3. **No pagers.** GIT_PAGER and PAGER are forced to `cat` inside the
 #    recorded session so `git log` (and any other paging tool) doesn't pop a
@@ -249,25 +249,32 @@ record() {
   local cast="$CASTS_DIR/$name.cast"
   echo "→ recording $name ..."
   rm -f "$cast"
-  # Compose the session: source helpers, then run the step's commands.
-  local session
-  session="source $HELPERS_FILE
+
+  # asciinema 3.x doesn't forward its parent's stdin to the recorded pty the
+  # way 2.x did, so piping the session via <<< hangs forever (bash sits
+  # idle waiting on the tty). Write the session to a temp script file and
+  # have bash run it non-interactively instead — bash exits at EOF, the
+  # pty closes, asciinema stops recording cleanly.
+  local session_file
+  session_file=$(mktemp -t brunch-record-XXXXXX.sh)
+  cat > "$session_file" <<EOF
+source "$HELPERS_FILE"
 $commands
-exit
-"
-  PS1='' \
-    BRUNCH_TYPE_CPS="$TYPE_CPS" \
+EOF
+
+  BRUNCH_TYPE_CPS="$TYPE_CPS" \
     BRUNCH_POST_LINE_PAUSE="$POST_LINE_PAUSE" \
     BRUNCH_CAST_COLS="$CAST_COLS" \
     BRUNCH_CAST_ROWS="$CAST_ROWS" \
     asciinema rec \
       --overwrite \
-      --cols "$CAST_COLS" \
-      --rows "$CAST_ROWS" \
+      --window-size "${CAST_COLS}x${CAST_ROWS}" \
       --idle-time-limit "$IDLE_TIME_LIMIT" \
       --title "brunch walkthrough — $name" \
-      --command "bash --noprofile --norc -i" \
-      "$cast" <<< "$session"
+      --command "bash --noprofile --norc '$session_file'" \
+      "$cast"
+
+  rm -f "$session_file"
 }
 
 # ---------------------------------------------------------------------------
