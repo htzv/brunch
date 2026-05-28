@@ -24,7 +24,7 @@ def _write_manifest(ws: Path, *, repos: list[tuple[str, str, str]]) -> Workspace
 def _install_canonical(
     make_canonical: Callable[..., Path], canonical_root: Path, *, name: str
 ) -> Path:
-    target = canonical_root / "github.com" / "acme" / name
+    target = canonical_root / "github.com" / "kybernetix" / name
     target.parent.mkdir(parents=True, exist_ok=True)
     shutil.move(str(make_canonical(name)), str(target))
     return target
@@ -53,7 +53,7 @@ class TestRebaseHappyPath:
         ws = make_workspace()
         worktree_factory(canonical, ws / "api", branch="feature", base="main")
         _commit(canonical, "main-only.txt", "main\n", "advance-main")
-        loc = _write_manifest(ws, repos=[("acme/api", "feature", "main")])
+        loc = _write_manifest(ws, repos=[("kybernetix/api", "feature", "main")])
 
         report = rebase_workspace(loc, _config(canonical_root), no_fetch=True)
         assert report.actions[0].action == "rebased"
@@ -71,7 +71,7 @@ class TestRebaseHappyPath:
         canonical = _install_canonical(make_canonical, canonical_root, name="api")
         ws = make_workspace()
         worktree_factory(canonical, ws / "api", branch="feature", base="main")
-        loc = _write_manifest(ws, repos=[("acme/api", "feature", "main")])
+        loc = _write_manifest(ws, repos=[("kybernetix/api", "feature", "main")])
 
         report = rebase_workspace(loc, _config(canonical_root), no_fetch=True)
         assert report.actions[0].action == "up_to_date"
@@ -87,7 +87,7 @@ class TestRebaseHappyPath:
         canonical = _install_canonical(make_canonical, canonical_root, name="api")
         ws = make_workspace()
         worktree_factory(canonical, ws / "api", branch="feature", base="main")
-        loc = _write_manifest(ws, repos=[("acme/api", "feature", "main")])
+        loc = _write_manifest(ws, repos=[("kybernetix/api", "feature", "main")])
 
         report = rebase_workspace(loc, _config(canonical_root), no_fetch=True, dry_run=True)
         assert report.actions[0].action == "would_rebase"
@@ -122,8 +122,8 @@ class TestRebaseConflicts:
         loc = _write_manifest(
             ws,
             repos=[
-                ("acme/api", "feature", "main"),
-                ("acme/dashboard", "feature", "main"),
+                ("kybernetix/api", "feature", "main"),
+                ("kybernetix/dashboard", "feature", "main"),
             ],
         )
         report = rebase_workspace(loc, _config(canonical_root), no_fetch=True)
@@ -160,8 +160,8 @@ class TestRebaseConflicts:
         loc = _write_manifest(
             ws,
             repos=[
-                ("acme/api", "feature", "main"),
-                ("acme/dashboard", "feature", "main"),
+                ("kybernetix/api", "feature", "main"),
+                ("kybernetix/dashboard", "feature", "main"),
             ],
         )
         report = rebase_workspace(
@@ -193,7 +193,7 @@ class TestRebaseWithOnto:
         _commit(canonical, "wip-only.txt", "w\n", "advance-wip")
         subprocess.run(["git", "checkout", "main"], cwd=canonical, check=True, capture_output=True)
 
-        loc = _write_manifest(ws, repos=[("acme/api", "feature", "main")])
+        loc = _write_manifest(ws, repos=[("kybernetix/api", "feature", "main")])
         report = rebase_workspace(loc, _config(canonical_root), onto="wip", no_fetch=True)
         assert report.actions[0].action == "rebased"
         assert report.actions[0].target == "wip"
@@ -210,7 +210,7 @@ class TestRebaseGuards:
         canonical_root = tmp_path / "canonical-root"
         _install_canonical(make_canonical, canonical_root, name="api")
         ws = make_workspace()
-        loc = _write_manifest(ws, repos=[("acme/api", "feature", "main")])
+        loc = _write_manifest(ws, repos=[("kybernetix/api", "feature", "main")])
         report = rebase_workspace(loc, _config(canonical_root), no_fetch=True)
         assert report.actions[0].action == "skipped"
 

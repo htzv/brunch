@@ -15,8 +15,8 @@ You should see something like:
 
 ```text
 workspace  task-1234-add-export
-path       /home/you/repos/kybernetix.example/tasks/task-1234-add-export
-about      Backend + frontend for typical acme fullstack tasks.
+path       /home/you/tasks/task-1234-add-export
+about      Backend + frontend for typical Kybernetix fullstack tasks.
 
   ┃ repo     ┃ branch               ┃ state ┃ ahead/behind ┃
   ╇━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━╇━━━━━━━━━━━━━━┩
@@ -45,7 +45,7 @@ brunch fsck
 
 ```text
 workspace  task-1234-add-export
-path       /home/you/repos/kybernetix.example/tasks/task-1234-add-export
+path       /home/you/tasks/task-1234-add-export
 
 all checks passed
 ```

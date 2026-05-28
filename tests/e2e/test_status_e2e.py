@@ -74,7 +74,7 @@ class TestStatusE2E:
             canonical_factory=make_canonical,
             workspace_factory=make_workspace,
             worktree_factory=worktree_factory,
-            repos=[("acme/api", "feat", "main"), ("acme/dashboard", "feat", "main")],
+            repos=[("kybernetix/api", "feat", "main"), ("kybernetix/dashboard", "feat", "main")],
         )
 
         result = runner.invoke(app, ["status", "-w", str(ws)])
@@ -97,7 +97,7 @@ class TestStatusE2E:
             canonical_factory=make_canonical,
             workspace_factory=make_workspace,
             worktree_factory=worktree_factory,
-            repos=[("acme/api", "feat", "main")],
+            repos=[("kybernetix/api", "feat", "main")],
         )
 
         result = runner.invoke(app, ["status", "-w", str(ws), "--json"])
@@ -120,7 +120,7 @@ class TestStatusE2E:
             canonical_factory=make_canonical,
             workspace_factory=make_workspace,
             worktree_factory=worktree_factory,
-            repos=[("acme/api", "feat", "main")],
+            repos=[("kybernetix/api", "feat", "main")],
         )
         # Switch the worktree to a different branch.
         import subprocess

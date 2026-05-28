@@ -44,7 +44,7 @@ The default `<root>` is `~/repos/brunch`. Override via
 `~/.config/brunch/config.toml`:
 
 ```toml
-root          = "~/repos/kybernetix.example/clones"
+root          = "~/repos/kybernetix/clones"
 default_forge = "github.com"
 
 [forges.github_com]
@@ -54,7 +54,7 @@ base_url = "https://github.com"
 To populate that tree, use any of:
 
 ```bash
-gh repo clone kybernetix/backend ~/repos/kybernetix.example/clones/github.com/kybernetix/backend
+gh repo clone kybernetix/backend ~/repos/kybernetix/clones/github.com/kybernetix/backend
 # or
 ghq get github.com/kybernetix/backend  # if you use ghq with the matching root
 ```
@@ -69,7 +69,7 @@ This is the smallest end-to-end story: a task touching two repos.
 ### 1. Create the workspace
 
 ```bash
-cd ~/repos/kybernetix.example/tasks       # wherever you keep them — brunch doesn't care
+cd ~/tasks       # wherever you keep them — brunch doesn't care
 brunch init task-1234-billing-flow
 ```
 
@@ -179,7 +179,7 @@ and `rm -rf <workspace>` manually if you really want them gone. See
 Already have a folder of worktrees you assembled by hand? Adopt it:
 
 ```bash
-cd ~/repos/kybernetix.example/tasks/tech-1796-tweaks
+cd ~/tasks/tech-1796-tweaks
 brunch adopt                  # adopts cwd; workspace name = directory name
 brunch adopt --dry-run        # preview the inferred manifest first
 brunch adopt /path/to/folder  # adopt a specific path
@@ -256,7 +256,7 @@ set root (notes, scratch files) is also preserved.
 ## Shortcut: workspace from a template
 
 Templates live as plain TOML files at `~/.config/brunch/templates/<id>.toml`.
-A few starter templates for Kybernetix work live under
+A few starter templates for a fictional Kybernetix product live under
 [`docs/examples/templates/`](examples/templates/); copy any of them into your
 config dir to make them available:
 

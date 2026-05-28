@@ -23,7 +23,7 @@ def _write_manifest(ws: Path, *, repos: list[tuple[str, str, str]]) -> Workspace
 def _install_canonical(
     make_canonical: Callable[..., Path], canonical_root: Path, *, name: str
 ) -> Path:
-    target = canonical_root / "github.com" / "acme" / name
+    target = canonical_root / "github.com" / "kybernetix" / name
     target.parent.mkdir(parents=True, exist_ok=True)
     shutil.move(str(make_canonical(name)), str(target))
     return target
@@ -50,8 +50,8 @@ class TestForeachHappyPath:
         loc = _write_manifest(
             ws,
             repos=[
-                ("acme/api", "feat", "main"),
-                ("acme/dashboard", "feat", "main"),
+                ("kybernetix/api", "feat", "main"),
+                ("kybernetix/dashboard", "feat", "main"),
             ],
         )
         report = foreach_workspace(
@@ -72,7 +72,7 @@ class TestForeachHappyPath:
         a = _install_canonical(make_canonical, canonical_root, name="api")
         ws = make_workspace()
         worktree_factory(a, ws / "api", branch="feat", base="main")
-        loc = _write_manifest(ws, repos=[("acme/api", "feat", "main")])
+        loc = _write_manifest(ws, repos=[("kybernetix/api", "feat", "main")])
 
         report = foreach_workspace(
             loc,
@@ -94,7 +94,7 @@ class TestForeachHappyPath:
         a = _install_canonical(make_canonical, canonical_root, name="api")
         ws = make_workspace()
         worktree_factory(a, ws / "api", branch="feat", base="main")
-        loc = _write_manifest(ws, repos=[("acme/api", "feat", "main")])
+        loc = _write_manifest(ws, repos=[("kybernetix/api", "feat", "main")])
         report = foreach_workspace(
             loc, _config(canonical_root), command=["false"], capture_output=True, dry_run=True
         )
@@ -118,8 +118,8 @@ class TestForeachFailures:
         loc = _write_manifest(
             ws,
             repos=[
-                ("acme/api", "feat", "main"),
-                ("acme/dashboard", "feat", "main"),
+                ("kybernetix/api", "feat", "main"),
+                ("kybernetix/dashboard", "feat", "main"),
             ],
         )
         report = foreach_workspace(
@@ -144,8 +144,8 @@ class TestForeachFailures:
         loc = _write_manifest(
             ws,
             repos=[
-                ("acme/api", "feat", "main"),
-                ("acme/dashboard", "feat", "main"),
+                ("kybernetix/api", "feat", "main"),
+                ("kybernetix/dashboard", "feat", "main"),
             ],
         )
         report = foreach_workspace(
@@ -168,7 +168,7 @@ class TestForeachFailures:
         a = _install_canonical(make_canonical, canonical_root, name="api")
         ws = make_workspace()
         worktree_factory(a, ws / "api", branch="feat", base="main")
-        loc = _write_manifest(ws, repos=[("acme/api", "feat", "main")])
+        loc = _write_manifest(ws, repos=[("kybernetix/api", "feat", "main")])
         report = foreach_workspace(
             loc,
             _config(canonical_root),
@@ -188,7 +188,7 @@ class TestForeachGuards:
         canonical_root = tmp_path / "canonical-root"
         _install_canonical(make_canonical, canonical_root, name="api")
         ws = make_workspace()
-        loc = _write_manifest(ws, repos=[("acme/api", "feat", "main")])
+        loc = _write_manifest(ws, repos=[("kybernetix/api", "feat", "main")])
         report = foreach_workspace(
             loc, _config(canonical_root), command=["true"], capture_output=True
         )

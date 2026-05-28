@@ -18,7 +18,7 @@ def _capture(fn, *args, **kwargs) -> str:
 
 def _repo_status(**overrides) -> RepoStatus:
     defaults = dict(
-        repo_spec="acme/api",
+        repo_spec="kybernetix/api",
         short_name="api",
         worktree_path=Path("/tmp/ws/api"),
         exists=True,
@@ -140,14 +140,14 @@ class TestRenderFsckReport:
                     severity="error",
                     code="canonical-missing",
                     message="not found at /x",
-                    repo="acme/api",
+                    repo="kybernetix/api",
                     hint="clone it",
                 ),
                 FsckFinding(
                     severity="warning",
                     code="branch-drift",
                     message="declared vs actual",
-                    repo="acme/api",
+                    repo="kybernetix/api",
                 ),
                 FsckFinding(severity="info", code="something", message="fine to know"),
             ],

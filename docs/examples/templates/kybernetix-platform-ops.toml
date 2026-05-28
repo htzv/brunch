@@ -1,19 +1,20 @@
 # kybernetix-platform-ops
 #
-# Platform/ops tasks that touch terraform, the backend CLI, and the backend
-# (since the admin CLI lives next to backend code).
+# Platform / ops tasks touching terraform + container infra and the
+# backend (since infra changes often need coordinated backend tweaks —
+# config flags, health-check endpoints, migration runners).
 #
 # Usage:
 #   cp docs/examples/templates/kybernetix-platform-ops.toml ~/.config/brunch/templates/
-#   brunch init task-4567-admin-flow -t kybernetix-platform-ops
+#   brunch init task-4567-bump-base-images -t kybernetix-platform-ops
 
-description = "Platform ops: terraform templates + backend + backend."
+description = "Kybernetix platform/ops: devops + oci-base-images + backend."
 
 [[repo]]
 repo = "kybernetix/devops"
 
 [[repo]]
-repo = "kybernetix/backend"
+repo = "kybernetix/oci-base-images"
 
 [[repo]]
 repo = "kybernetix/backend"

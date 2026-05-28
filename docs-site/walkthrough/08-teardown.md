@@ -14,18 +14,18 @@ deletes the workspace directory:
 
 ```text
 rm  task-1234-add-export
-    path  /home/you/repos/kybernetix.example/tasks/task-1234-add-export
+    path  /home/you/tasks/task-1234-add-export
 
-  REMOVED       backend   (acme/backend)
+  REMOVED       backend   (kybernetix/backend)
                 removed worktree at .../task-1234-add-export/backend
-  REMOVED       frontend  (acme/frontend)
+  REMOVED       frontend  (kybernetix/frontend)
                 removed worktree at .../task-1234-add-export/frontend
 
 removed workspace .../task-1234-add-export
 ```
 
 **Branches survive.** brunch never deletes branches — they stay in the
-canonical clones. You can `git -C ~/repos/brunch/github.com/acme/backend
+canonical clones. You can `git -C ~/repos/brunch/github.com/kybernetix/backend
 branch --list task-1234-*` and they'll be right there. Worktrees are
 cheap to recreate; branches are where the work lives.
 
@@ -61,7 +61,7 @@ local-only branches with unpushed commits, `rm` refuses by default:
 ```text
 refused: workspace has at-risk repos:
 
-  backend  (acme/backend)
+  backend  (kybernetix/backend)
            uncommitted changes, 2 unpushed commit(s)
 
 hint: commit/push/clean the worktrees, or pass --force to archive
@@ -77,8 +77,8 @@ brunch rm -w task-1234-add-export --force
 
 ```text
   archived to ~/.local/share/brunch/archives/task-1234-add-export-20260520T143042Z.tar.gz
-  REMOVED       backend   (acme/backend)
-  REMOVED       frontend  (acme/frontend)
+  REMOVED       backend   (kybernetix/backend)
+  REMOVED       frontend  (kybernetix/frontend)
 removed workspace …
 ```
 

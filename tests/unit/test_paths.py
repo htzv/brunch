@@ -19,8 +19,8 @@ from brunch.paths import (
 
 class TestParseRepoSpec:
     def test_short_form_infers_default_forge(self) -> None:
-        spec = parse_repo_spec("acme/api", default_forge="github.com")
-        assert spec == RepoSpec(forge="github.com", org="acme", name="api")
+        spec = parse_repo_spec("kybernetix/api", default_forge="github.com")
+        assert spec == RepoSpec(forge="github.com", org="kybernetix", name="api")
 
     def test_long_form_uses_explicit_forge(self) -> None:
         spec = parse_repo_spec("gitlab.internal/team/svc", default_forge="github.com")
@@ -28,7 +28,16 @@ class TestParseRepoSpec:
 
     @pytest.mark.parametrize(
         "bad",
-        ["", " ", "  acme/api", "acme/api  ", "single", "a/b/c/d", "a//b", "/acme/api"],
+        [
+            "",
+            " ",
+            "  kybernetix/api",
+            "kybernetix/api  ",
+            "single",
+            "a/b/c/d",
+            "a//b",
+            "/kybernetix/api",
+        ],
     )
     def test_rejects_malformed(self, bad: str) -> None:
         with pytest.raises(RepoSpecError):
@@ -37,9 +46,9 @@ class TestParseRepoSpec:
 
 class TestRepoSpecProperties:
     def test_short_and_qualified(self) -> None:
-        spec = RepoSpec(forge="github.com", org="acme", name="api")
-        assert spec.short == "acme/api"
-        assert spec.qualified == "github.com/acme/api"
+        spec = RepoSpec(forge="github.com", org="kybernetix", name="api")
+        assert spec.short == "kybernetix/api"
+        assert spec.qualified == "github.com/kybernetix/api"
 
 
 class TestExpandRoot:
@@ -57,14 +66,16 @@ class TestExpandRoot:
 
 class TestCanonicalClonePath:
     def test_layout_is_forge_org_name(self) -> None:
-        spec = RepoSpec(forge="github.com", org="acme", name="api")
-        assert canonical_clone_path(spec, root=Path("/srv/r")) == Path("/srv/r/github.com/acme/api")
+        spec = RepoSpec(forge="github.com", org="kybernetix", name="api")
+        assert canonical_clone_path(spec, root=Path("/srv/r")) == Path(
+            "/srv/r/github.com/kybernetix/api"
+        )
 
     def test_expands_tilde_in_root(self) -> None:
-        spec = RepoSpec(forge="github.com", org="acme", name="api")
+        spec = RepoSpec(forge="github.com", org="kybernetix", name="api")
         out = canonical_clone_path(spec, root=Path("~/x"))
         assert out.is_absolute()
-        assert str(out).endswith("/x/github.com/acme/api")
+        assert str(out).endswith("/x/github.com/kybernetix/api")
 
 
 class TestDiscoverWorkspace:

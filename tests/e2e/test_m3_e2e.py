@@ -18,7 +18,7 @@ runner = CliRunner()
 def _install_canonical(
     make_canonical: Callable[..., Path], canonical_root: Path, *, name: str
 ) -> Path:
-    target = canonical_root / "github.com" / "acme" / name
+    target = canonical_root / "github.com" / "kybernetix" / name
     target.parent.mkdir(parents=True, exist_ok=True)
     shutil.move(str(make_canonical(name)), str(target))
     return target
@@ -48,7 +48,7 @@ class TestFetchE2E:
         _write_config(isolated_home, root=canonical_root)
         runner.invoke(app, ["init", "task-1", "-p", str(isolated_home)])
         ws = isolated_home / "task-1"
-        runner.invoke(app, ["add", "acme/api", "-w", str(ws)])
+        runner.invoke(app, ["add", "kybernetix/api", "-w", str(ws)])
 
         result = runner.invoke(app, ["fetch", "-w", str(ws)])
         assert result.exit_code == 0, result.output
@@ -65,7 +65,7 @@ class TestFetchE2E:
         _write_config(isolated_home, root=canonical_root)
         runner.invoke(app, ["init", "task-1", "-p", str(isolated_home)])
         ws = isolated_home / "task-1"
-        runner.invoke(app, ["add", "acme/api", "-w", str(ws)])
+        runner.invoke(app, ["add", "kybernetix/api", "-w", str(ws)])
 
         result = runner.invoke(app, ["fetch", "-w", str(ws), "--json"])
         assert result.exit_code == 0
@@ -86,7 +86,7 @@ class TestRebaseE2E:
         _write_config(isolated_home, root=canonical_root)
         runner.invoke(app, ["init", "task-1", "-p", str(isolated_home)])
         ws = isolated_home / "task-1"
-        runner.invoke(app, ["add", "acme/api", "-w", str(ws)])
+        runner.invoke(app, ["add", "kybernetix/api", "-w", str(ws)])
         # Advance main in the canonical.
         _commit(canonical, "main-only.txt", "x\n", "advance-main")
 
@@ -106,7 +106,7 @@ class TestRebaseE2E:
         _write_config(isolated_home, root=canonical_root)
         runner.invoke(app, ["init", "task-1", "-p", str(isolated_home)])
         ws = isolated_home / "task-1"
-        runner.invoke(app, ["add", "acme/api", "-w", str(ws)])
+        runner.invoke(app, ["add", "kybernetix/api", "-w", str(ws)])
 
         result = runner.invoke(app, ["rebase", "-w", str(ws), "--no-fetch"])
         assert result.exit_code == 0
@@ -123,7 +123,7 @@ class TestRebaseE2E:
         _write_config(isolated_home, root=canonical_root)
         runner.invoke(app, ["init", "task-1", "-p", str(isolated_home)])
         ws = isolated_home / "task-1"
-        runner.invoke(app, ["add", "acme/api", "-w", str(ws)])
+        runner.invoke(app, ["add", "kybernetix/api", "-w", str(ws)])
 
         # Conflict: edit README on the feature branch and on main.
         (ws / "api" / "README.md").write_text("feature\n", encoding="utf-8")
@@ -154,8 +154,8 @@ class TestForeachE2E:
         _write_config(isolated_home, root=canonical_root)
         runner.invoke(app, ["init", "task-1", "-p", str(isolated_home)])
         ws = isolated_home / "task-1"
-        runner.invoke(app, ["add", "acme/api", "-w", str(ws)])
-        runner.invoke(app, ["add", "acme/dashboard", "-w", str(ws)])
+        runner.invoke(app, ["add", "kybernetix/api", "-w", str(ws)])
+        runner.invoke(app, ["add", "kybernetix/dashboard", "-w", str(ws)])
 
         result = runner.invoke(app, ["foreach", "-w", str(ws), "true"])
         assert result.exit_code == 0, result.output
@@ -173,7 +173,7 @@ class TestForeachE2E:
         _write_config(isolated_home, root=canonical_root)
         runner.invoke(app, ["init", "task-1", "-p", str(isolated_home)])
         ws = isolated_home / "task-1"
-        runner.invoke(app, ["add", "acme/api", "-w", str(ws)])
+        runner.invoke(app, ["add", "kybernetix/api", "-w", str(ws)])
 
         result = runner.invoke(
             app, ["foreach", "-w", str(ws), "--json", "--", "sh", "-c", "echo hello"]
@@ -195,8 +195,8 @@ class TestForeachE2E:
         _write_config(isolated_home, root=canonical_root)
         runner.invoke(app, ["init", "task-1", "-p", str(isolated_home)])
         ws = isolated_home / "task-1"
-        runner.invoke(app, ["add", "acme/api", "-w", str(ws)])
-        runner.invoke(app, ["add", "acme/dashboard", "-w", str(ws)])
+        runner.invoke(app, ["add", "kybernetix/api", "-w", str(ws)])
+        runner.invoke(app, ["add", "kybernetix/dashboard", "-w", str(ws)])
 
         result = runner.invoke(
             app,

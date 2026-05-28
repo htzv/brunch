@@ -23,7 +23,7 @@ def _workspace_with(ws: Path, *, repos: list[tuple[str, str, str]]) -> Workspace
 def _setup_canonical(
     make_canonical: Callable[..., Path], canonical_root: Path, *, name: str
 ) -> Path:
-    target = canonical_root / "github.com" / "acme" / name
+    target = canonical_root / "github.com" / "kybernetix" / name
     target.parent.mkdir(parents=True, exist_ok=True)
     shutil.move(str(make_canonical(name)), str(target))
     return target
@@ -55,8 +55,8 @@ class TestSyncCreatesMissingWorktrees:
         loc = _workspace_with(
             ws,
             repos=[
-                ("acme/api", "feat", "main"),
-                ("acme/dashboard", "feat", "main"),
+                ("kybernetix/api", "feat", "main"),
+                ("kybernetix/dashboard", "feat", "main"),
             ],
         )
         report = sync_workspace(loc, _config(canonical_root))
@@ -77,7 +77,7 @@ class TestSyncCreatesMissingWorktrees:
         _setup_canonical(make_canonical, canonical_root, name="api")
 
         ws = make_workspace()
-        loc = _workspace_with(ws, repos=[("acme/api", "feat", "main")])
+        loc = _workspace_with(ws, repos=[("kybernetix/api", "feat", "main")])
         report = sync_workspace(loc, _config(canonical_root), dry_run=True)
         assert report.dry_run is True
         action = report.actions[0]
@@ -98,7 +98,7 @@ class TestSyncWarnings:
         canonical = _setup_canonical(make_canonical, canonical_root, name="api")
         ws = make_workspace()
         worktree_factory(canonical, ws / "api", branch="actual", base="main")
-        loc = _workspace_with(ws, repos=[("acme/api", "declared", "main")])
+        loc = _workspace_with(ws, repos=[("kybernetix/api", "declared", "main")])
         report = sync_workspace(loc, _config(canonical_root))
         assert report.has_warnings
         assert report.actions[0].action == "warning"
@@ -116,7 +116,7 @@ class TestSyncWarnings:
         ws = make_workspace()
         worktree_factory(canonical, ws / "api", branch="feat", base="main")
         (ws / "api" / "README.md").write_text("dirty\n", encoding="utf-8")
-        loc = _workspace_with(ws, repos=[("acme/api", "feat", "main")])
+        loc = _workspace_with(ws, repos=[("kybernetix/api", "feat", "main")])
         report = sync_workspace(loc, _config(canonical_root))
         assert report.actions[0].action == "warning"
         assert "uncommitted" in report.actions[0].message
@@ -129,7 +129,7 @@ class TestSyncErrors:
         make_workspace: Callable[..., Path],
     ) -> None:
         ws = make_workspace()
-        loc = _workspace_with(ws, repos=[("acme/api", "f", "main")])
+        loc = _workspace_with(ws, repos=[("kybernetix/api", "f", "main")])
         report = sync_workspace(loc, _config(tmp_path / "no-root"))
         assert report.has_errors
         assert "canonical clone not found" in report.actions[0].message
@@ -147,7 +147,7 @@ class TestSyncErrors:
         worktree_factory(canonical, tmp_path / "park", branch="contested", base="main")
 
         ws = make_workspace()
-        loc = _workspace_with(ws, repos=[("acme/api", "contested", "main")])
+        loc = _workspace_with(ws, repos=[("kybernetix/api", "contested", "main")])
         report = sync_workspace(loc, _config(canonical_root))
         assert report.has_errors
         msg = report.actions[0].message
@@ -164,7 +164,7 @@ class TestSyncIdempotence:
         canonical_root = tmp_path / "canonical-root"
         _setup_canonical(make_canonical, canonical_root, name="api")
         ws = make_workspace()
-        loc = _workspace_with(ws, repos=[("acme/api", "feat", "main")])
+        loc = _workspace_with(ws, repos=[("kybernetix/api", "feat", "main")])
         sync_workspace(loc, _config(canonical_root))
         second = sync_workspace(loc, _config(canonical_root))
         assert second.actions[0].action == "ok"

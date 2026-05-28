@@ -31,7 +31,7 @@ def _make_workspace(
 def _install_canonical(
     make_canonical: Callable[..., Path], canonical_root: Path, *, name: str
 ) -> Path:
-    target = canonical_root / "github.com" / "acme" / name
+    target = canonical_root / "github.com" / "kybernetix" / name
     target.parent.mkdir(parents=True, exist_ok=True)
     shutil.move(str(make_canonical(name)), str(target))
     return target
@@ -53,9 +53,9 @@ class TestAddRepoHappyPath:
         ws = make_workspace("billing-flow")
         loc = _make_workspace(ws)
 
-        outcome = add_repo(loc, _config(canonical_root), repo="acme/api")
+        outcome = add_repo(loc, _config(canonical_root), repo="kybernetix/api")
 
-        assert outcome.repo == "acme/api"
+        assert outcome.repo == "kybernetix/api"
         # branch defaults to workspace name
         assert outcome.branch == "billing-flow"
         assert outcome.base == "main"
@@ -64,7 +64,7 @@ class TestAddRepoHappyPath:
 
         # Manifest now has the entry.
         m = load_workspace_manifest(loc.manifest_path)
-        assert any(r.repo == "acme/api" and r.branch == "billing-flow" for r in m.repos)
+        assert any(r.repo == "kybernetix/api" and r.branch == "billing-flow" for r in m.repos)
 
     def test_explicit_branch_and_base_override_defaults(
         self,
@@ -89,7 +89,7 @@ class TestAddRepoHappyPath:
         outcome = add_repo(
             loc,
             _config(canonical_root),
-            repo="acme/api",
+            repo="kybernetix/api",
             branch="custom-feature",
             base="develop",
         )
@@ -107,7 +107,7 @@ class TestAddRepoHappyPath:
         ws = make_workspace()
         loc = _make_workspace(ws)
 
-        outcome = add_repo(loc, _config(canonical_root), repo="acme/api", dry_run=True)
+        outcome = add_repo(loc, _config(canonical_root), repo="kybernetix/api", dry_run=True)
         assert outcome.dry_run is True
         assert not (ws / "api").exists()
         # Manifest is unchanged.
@@ -125,9 +125,9 @@ class TestAddRepoErrors:
         canonical_root = tmp_path / "canonical-root"
         _install_canonical(make_canonical, canonical_root, name="api")
         ws = make_workspace()
-        loc = _make_workspace(ws, repos=[("acme/api", "feat", "main")])
+        loc = _make_workspace(ws, repos=[("kybernetix/api", "feat", "main")])
         with pytest.raises(DuplicateRepoError, match="already in the manifest"):
-            add_repo(loc, _config(canonical_root), repo="acme/api")
+            add_repo(loc, _config(canonical_root), repo="kybernetix/api")
 
     def test_duplicate_short_name_in_manifest(
         self,
@@ -143,7 +143,7 @@ class TestAddRepoErrors:
         shutil.move(str(make_canonical("api-other")), str(target))
 
         ws = make_workspace()
-        loc = _make_workspace(ws, repos=[("acme/api", "feat", "main")])
+        loc = _make_workspace(ws, repos=[("kybernetix/api", "feat", "main")])
         # Pre-create the existing worktree so subdir collision is independent.
         from brunch.services.sync import sync_workspace
 
@@ -158,7 +158,7 @@ class TestAddRepoErrors:
         ws = make_workspace()
         loc = _make_workspace(ws)
         with pytest.raises(BrunchError, match="canonical clone not found"):
-            add_repo(loc, _config(tmp_path / "nowhere"), repo="acme/api")
+            add_repo(loc, _config(tmp_path / "nowhere"), repo="kybernetix/api")
 
     def test_existing_target_dir_raises(
         self,
@@ -172,7 +172,7 @@ class TestAddRepoErrors:
         (ws / "api").mkdir()  # collide
         loc = _make_workspace(ws)
         with pytest.raises(BrunchError, match="already exists"):
-            add_repo(loc, _config(canonical_root), repo="acme/api")
+            add_repo(loc, _config(canonical_root), repo="kybernetix/api")
 
     def test_branch_already_checked_out_elsewhere(
         self,
@@ -187,11 +187,11 @@ class TestAddRepoErrors:
         ws = make_workspace()
         loc = _make_workspace(ws)
         with pytest.raises(BranchConflictError, match="already checked out"):
-            add_repo(loc, _config(canonical_root), repo="acme/api", branch="contested")
+            add_repo(loc, _config(canonical_root), repo="kybernetix/api", branch="contested")
 
     def test_set_mode_rejected(self, tmp_path: Path) -> None:
         marker = tmp_path / "brunch-set.toml"
         marker.write_text('name = "s"\n', encoding="utf-8")
         loc = WorkspaceLocation(mode="set", root=tmp_path, manifest_path=marker)
         with pytest.raises(WorkspaceNotFoundError):
-            add_repo(loc, ToolConfig(), repo="acme/api")
+            add_repo(loc, ToolConfig(), repo="kybernetix/api")

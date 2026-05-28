@@ -24,7 +24,7 @@ def _write_manifest(ws: Path, *, repos: list[tuple[str, str, str]]) -> Workspace
 def _install_canonical(
     make_canonical: Callable[..., Path], canonical_root: Path, *, name: str
 ) -> Path:
-    target = canonical_root / "github.com" / "acme" / name
+    target = canonical_root / "github.com" / "kybernetix" / name
     target.parent.mkdir(parents=True, exist_ok=True)
     shutil.move(str(make_canonical(name)), str(target))
     return target
@@ -57,7 +57,7 @@ class TestFetchWorkspace:
         _wire_origin(canonical, upstream)
         ws = make_workspace()
         worktree_factory(canonical, ws / "api", branch="feat", base="main")
-        loc = _write_manifest(ws, repos=[("acme/api", "feat", "main")])
+        loc = _write_manifest(ws, repos=[("kybernetix/api", "feat", "main")])
 
         report = fetch_workspace(loc, _config(canonical_root))
         assert report.actions[0].action == "fetched"
@@ -74,7 +74,7 @@ class TestFetchWorkspace:
         canonical = _install_canonical(make_canonical, canonical_root, name="api")
         ws = make_workspace()
         worktree_factory(canonical, ws / "api", branch="feat", base="main")
-        loc = _write_manifest(ws, repos=[("acme/api", "feat", "main")])
+        loc = _write_manifest(ws, repos=[("kybernetix/api", "feat", "main")])
 
         report = fetch_workspace(loc, _config(canonical_root))
         assert report.actions[0].action == "skipped"
@@ -89,7 +89,7 @@ class TestFetchWorkspace:
         canonical_root = tmp_path / "canonical-root"
         _install_canonical(make_canonical, canonical_root, name="api")
         ws = make_workspace()
-        loc = _write_manifest(ws, repos=[("acme/api", "feat", "main")])
+        loc = _write_manifest(ws, repos=[("kybernetix/api", "feat", "main")])
 
         report = fetch_workspace(loc, _config(canonical_root))
         assert report.actions[0].action == "skipped"
@@ -108,7 +108,7 @@ class TestFetchWorkspace:
         _wire_origin(canonical, upstream)
         ws = make_workspace()
         worktree_factory(canonical, ws / "api", branch="feat", base="main")
-        loc = _write_manifest(ws, repos=[("acme/api", "feat", "main")])
+        loc = _write_manifest(ws, repos=[("kybernetix/api", "feat", "main")])
 
         report = fetch_workspace(loc, _config(canonical_root), dry_run=True)
         assert report.dry_run is True

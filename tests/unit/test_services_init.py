@@ -15,7 +15,7 @@ from brunch.services.init import init_set, init_workspace
 def _install_canonical(
     make_canonical: Callable[..., Path], canonical_root: Path, *, name: str
 ) -> Path:
-    target = canonical_root / "github.com" / "acme" / name
+    target = canonical_root / "github.com" / "kybernetix" / name
     target.parent.mkdir(parents=True, exist_ok=True)
     shutil.move(str(make_canonical(name)), str(target))
     return target
@@ -71,10 +71,10 @@ class TestInitWorkspace:
             description = "backend + dashboard"
 
             [[repo]]
-            repo = "acme/api"
+            repo = "kybernetix/api"
 
             [[repo]]
-            repo = "acme/dashboard"
+            repo = "kybernetix/dashboard"
             """,
         )
 

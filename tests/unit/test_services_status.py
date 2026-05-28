@@ -37,7 +37,7 @@ class TestComputeWorkspaceStatus:
 
     def test_missing_worktree_marked_not_exists(self, make_workspace: Callable[..., Path]) -> None:
         ws = make_workspace("ws1")
-        loc = _workspace_with(ws, repos=[("acme/api", "feat", "main")])
+        loc = _workspace_with(ws, repos=[("kybernetix/api", "feat", "main")])
         result = compute_workspace_status(loc, ToolConfig())
         assert len(result.repos) == 1
         r = result.repos[0]
@@ -57,7 +57,7 @@ class TestComputeWorkspaceStatus:
         canonical = make_canonical("api")
         ws = make_workspace("ws1")
         worktree_factory(canonical, ws / "api", branch="feat", base="main")
-        loc = _workspace_with(ws, repos=[("acme/api", "feat", "main")])
+        loc = _workspace_with(ws, repos=[("kybernetix/api", "feat", "main")])
         result = compute_workspace_status(loc, ToolConfig())
         r = result.repos[0]
         assert r.exists is True
@@ -76,7 +76,7 @@ class TestComputeWorkspaceStatus:
         ws = make_workspace("ws1")
         worktree_factory(canonical, ws / "api", branch="feat", base="main")
         (ws / "api" / "README.md").write_text("dirty\n", encoding="utf-8")
-        loc = _workspace_with(ws, repos=[("acme/api", "feat", "main")])
+        loc = _workspace_with(ws, repos=[("kybernetix/api", "feat", "main")])
         r = compute_workspace_status(loc, ToolConfig()).repos[0]
         assert r.has_uncommitted is True
 
@@ -89,7 +89,7 @@ class TestComputeWorkspaceStatus:
         canonical = make_canonical("api")
         ws = make_workspace("ws1")
         worktree_factory(canonical, ws / "api", branch="actual", base="main")
-        loc = _workspace_with(ws, repos=[("acme/api", "declared", "main")])
+        loc = _workspace_with(ws, repos=[("kybernetix/api", "declared", "main")])
         r = compute_workspace_status(loc, ToolConfig()).repos[0]
         assert r.current_branch == "actual"
         assert r.declared_branch == "declared"

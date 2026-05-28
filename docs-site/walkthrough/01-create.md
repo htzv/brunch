@@ -3,14 +3,14 @@
 One command. Both worktrees materialise on a new branch.
 
 ```bash
-cd ~/repos/kybernetix.example/tasks
-brunch init task-1234-add-export -t acme-fullstack
+cd ~/tasks
+brunch init task-1234-add-export -t kybernetix-fullstack
 ```
 
 What happens, in order:
 
 1. brunch creates the directory `task-1234-add-export/`.
-2. It reads `~/.config/brunch/templates/acme-fullstack.toml`, fills in
+2. It reads `~/.config/brunch/templates/kybernetix-fullstack.toml`, fills in
    `name = "task-1234-add-export"`, and defaults each `[[repo]]`'s
    `branch` to the workspace name.
 3. The resulting `brunch.toml` is written at the workspace root.
@@ -30,15 +30,15 @@ The resulting `brunch.toml`:
 
 ```toml title="task-1234-add-export/brunch.toml"
 name = "task-1234-add-export"
-description = "Backend + frontend for typical acme fullstack tasks."
+description = "Backend + frontend for typical Kybernetix fullstack tasks."
 
 [[repo]]
-repo   = "acme/backend"
+repo   = "kybernetix/backend"
 branch = "task-1234-add-export"
 base   = "main"
 
 [[repo]]
-repo   = "acme/frontend"
+repo   = "kybernetix/frontend"
 branch = "task-1234-add-export"
 base   = "main"
 ```

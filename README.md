@@ -11,7 +11,7 @@ A small CLI for setting up, synchronising, and tearing down **task workspaces** 
 - **[Walkthrough (MkDocs site)](docs-site/walkthrough/index.md)** — nine pages, one short asciinema cast each, taking a complete task end to end (create → Claude Code → test → commit → push → PR → teardown). Build locally with `uv sync --extra docs && uv run mkdocs serve`.
 - [Getting started](docs/getting-started.md) — a guided tour from install to first workspace and back.
 - [Functional design](docs/initial-design.md) — what brunch is, why each decision was made, alternatives considered, deferred work.
-- [Example templates](docs/examples/templates/) — starter templates for common Kybernetix workspaces.
+- [Example templates](docs/examples/templates/) — starter templates for a fictional Kybernetix product.
 - [Original prompt](DESIGN.md) — the handoff document that started the conversation. Kept for provenance.
 
 ## Install (development)

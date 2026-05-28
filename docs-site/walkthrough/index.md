@@ -9,16 +9,16 @@ It needs a new API route on the backend and a download button on the
 frontend, and you want both repos checked out together so an agent (or
 your own brain) can keep them in sync.
 
-The repos in this tutorial are generic: `acme/backend` (Python) and
-`acme/frontend` (TypeScript). Kybernetix folks: substitute `kybernetix/backend`
-and `kybernetix/frontend` and everything else stays the same.
+The repos in this tutorial belong to a fictional Kybernetix product —
+`kybernetix/backend` (Python) and `kybernetix/frontend` (TypeScript).
+Substitute your own org's repos and everything else stays the same.
 
 ## What you'll see
 
 | Page | What happens |
 |---|---|
 | [0. Setup](00-setup.md) | One-time prep: install brunch, configure the canonical-clone root, install a template. |
-| [1. Create a workspace](01-create.md) | `brunch init task-1234-add-export -t acme-fullstack` — one command, both worktrees materialised. |
+| [1. Create a workspace](01-create.md) | `brunch init task-1234-add-export -t kybernetix-fullstack` — one command, both worktrees materialised. |
 | [2. Inspect](02-inspect.md) | `brunch status` and `brunch fsck` to confirm the workspace looks right. |
 | [3. Hand off to Claude Code](03-claude-code.md) | Start an agent session pointed at the workspace; it reasons across both repos. |
 | [4. Verify](04-verify.md) | `brunch foreach -- pytest` (or `pnpm test`) runs the test suite in every repo. |

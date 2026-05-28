@@ -23,7 +23,7 @@ runner = CliRunner()
 def _install_canonical(
     make_canonical: Callable[..., Path], canonical_root: Path, *, name: str
 ) -> Path:
-    target = canonical_root / "github.com" / "acme" / name
+    target = canonical_root / "github.com" / "kybernetix" / name
     target.parent.mkdir(parents=True, exist_ok=True)
     shutil.move(str(make_canonical(name)), str(target))
     return target
@@ -67,7 +67,7 @@ def _setup_set(
         runner.invoke(app, ["init", ws_name, "-p", str(set_root)])
         ws = set_root / ws_name
         for r in repos:
-            runner.invoke(app, ["add", f"acme/{r}", "-w", str(ws)])
+            runner.invoke(app, ["add", f"kybernetix/{r}", "-w", str(ws)])
     return set_root
 
 
@@ -331,7 +331,7 @@ class TestWorkspaceOnlyCommandsAtSetRoot:
     ) -> None:
         canonical_root = tmp_path / "canonical-root"
         set_root = _setup_set(isolated_home, canonical_root, make_canonical)
-        result = runner.invoke(app, ["add", "acme/api", "-w", str(set_root)])
+        result = runner.invoke(app, ["add", "kybernetix/api", "-w", str(set_root)])
         assert result.exit_code != 0
         assert "set" in result.output.lower() or "workspace" in result.output.lower()
 

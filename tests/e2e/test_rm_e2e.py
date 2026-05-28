@@ -19,7 +19,7 @@ runner = CliRunner()
 def _install_canonical(
     make_canonical: Callable[..., Path], canonical_root: Path, *, name: str
 ) -> Path:
-    target = canonical_root / "github.com" / "acme" / name
+    target = canonical_root / "github.com" / "kybernetix" / name
     target.parent.mkdir(parents=True, exist_ok=True)
     shutil.move(str(make_canonical(name)), str(target))
     return target
@@ -46,7 +46,7 @@ def _setup_workspace(
     runner.invoke(app, ["init", name, "-p", str(isolated_home)])
     ws = isolated_home / name
     for repo_name in repos:
-        runner.invoke(app, ["add", f"acme/{repo_name}", "-w", str(ws)])
+        runner.invoke(app, ["add", f"kybernetix/{repo_name}", "-w", str(ws)])
     return ws
 
 
@@ -158,7 +158,7 @@ class TestRmE2E:
         ws = _setup_workspace(isolated_home, canonical_root, make_canonical)
         result = runner.invoke(app, ["rm", "-w", str(ws)])
         assert result.exit_code == 0
-        canonical = canonical_root / "github.com" / "acme" / "api"
+        canonical = canonical_root / "github.com" / "kybernetix" / "api"
         out = subprocess.run(
             ["git", "branch", "--list", "task-1"],
             cwd=canonical,

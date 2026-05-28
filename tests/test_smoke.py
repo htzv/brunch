@@ -69,7 +69,7 @@ def test_workspace_aware_commands_fail_cleanly_outside_a_workspace(tmp_path: Pat
     for cmd in ["status", "fsck", "sync", "fetch", "pull", "rebase", "rm"]:
         result = runner.invoke(app, [cmd, "-w", str(tmp_path)])
         assert result.exit_code == 3, f"{cmd}: expected exit 3, got {result.exit_code}"
-    result = runner.invoke(app, ["add", "acme/api", "-w", str(tmp_path)])
+    result = runner.invoke(app, ["add", "kybernetix/api", "-w", str(tmp_path)])
     assert result.exit_code == 3, f"add: expected exit 3, got {result.exit_code}"
     result = runner.invoke(app, ["foreach", "true", "-w", str(tmp_path)])
     assert result.exit_code == 3, f"foreach: expected exit 3, got {result.exit_code}"

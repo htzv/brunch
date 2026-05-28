@@ -17,19 +17,19 @@ What the output looks like (live-streamed by `foreach`):
 Enumerating objects: 12, done.
 …
 remote: Create a pull request for 'task-1234-add-export' on GitHub:
-remote:   https://github.com/acme/backend/pull/new/task-1234-add-export
-To github.com:acme/backend.git
+remote:   https://github.com/kybernetix/backend/pull/new/task-1234-add-export
+To github.com:kybernetix/backend.git
  * [new branch]      HEAD -> task-1234-add-export
 branch 'task-1234-add-export' set up to track 'origin/task-1234-add-export'.
 
 ==> frontend
 …
 remote: Create a pull request for 'task-1234-add-export' on GitHub:
-remote:   https://github.com/acme/frontend/pull/new/task-1234-add-export
+remote:   https://github.com/kybernetix/frontend/pull/new/task-1234-add-export
 
 foreach  task-1234-add-export
-  OK     backend   (acme/backend) (exit 0)
-  OK     frontend  (acme/frontend) (exit 0)
+  OK     backend   (kybernetix/backend) (exit 0)
+  OK     frontend  (kybernetix/frontend) (exit 0)
 ```
 
 !!! brunch-tip "Pushing only specific repos"

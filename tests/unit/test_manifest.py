@@ -18,12 +18,12 @@ name = "task-1234"
 description = "Test workspace."
 
 [[repo]]
-repo = "acme/api"
+repo = "kybernetix/api"
 branch = "task-1234"
 base = "main"
 
 [[repo]]
-repo = "github.com/acme/dashboard"
+repo = "github.com/kybernetix/dashboard"
 branch = "task-1234"
 base = "main"
 """
@@ -42,8 +42,8 @@ class TestLoadWorkspaceManifest:
         assert m.name == "task-1234"
         assert m.description == "Test workspace."
         assert len(m.repos) == 2
-        assert m.repos[0] == RepoEntry(repo="acme/api", branch="task-1234", base="main")
-        assert m.repos[1].repo == "github.com/acme/dashboard"
+        assert m.repos[0] == RepoEntry(repo="kybernetix/api", branch="task-1234", base="main")
+        assert m.repos[1].repo == "github.com/kybernetix/dashboard"
 
     def test_missing_file(self, tmp_path: Path) -> None:
         with pytest.raises(ManifestError, match="not found"):
@@ -57,7 +57,7 @@ class TestLoadWorkspaceManifest:
 
     def test_missing_required_fields(self, tmp_path: Path) -> None:
         path = tmp_path / "brunch.toml"
-        path.write_text('name = "x"\n[[repo]]\nrepo = "acme/api"\n', encoding="utf-8")
+        path.write_text('name = "x"\n[[repo]]\nrepo = "kybernetix/api"\n', encoding="utf-8")
         with pytest.raises(ManifestError, match="invalid workspace manifest"):
             load_workspace_manifest(path)
 
@@ -103,7 +103,7 @@ class TestWriteWorkspaceManifest:
         m = WorkspaceManifest(
             name="t",
             description="d",
-            repo=[RepoEntry(repo="acme/api", branch="t", base="main")],
+            repo=[RepoEntry(repo="kybernetix/api", branch="t", base="main")],
         )
         path = tmp_path / "brunch.toml"
         write_workspace_manifest(path, m)

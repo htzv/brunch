@@ -25,12 +25,12 @@ class RepoSpec(BaseModel):
 
     @property
     def short(self) -> str:
-        """Short form, e.g. 'acme/api' (forge implied)."""
+        """Short form, e.g. 'kybernetix/api' (forge implied)."""
         return f"{self.org}/{self.name}"
 
     @property
     def qualified(self) -> str:
-        """Fully qualified form, e.g. 'github.com/acme/api'."""
+        """Fully qualified form, e.g. 'github.com/kybernetix/api'."""
         return f"{self.forge}/{self.org}/{self.name}"
 
 
@@ -42,7 +42,9 @@ class RepoEntry(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    repo: str = Field(description="Repo spec, e.g. 'acme/api' or 'github.com/acme/api'.")
+    repo: str = Field(
+        description="Repo spec, e.g. 'kybernetix/api' or 'github.com/kybernetix/api'."
+    )
     branch: str = Field(description="Branch to check out in the worktree.")
     base: str = Field(description="Branch this was started from / should be rebased onto.")
 

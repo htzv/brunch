@@ -92,35 +92,35 @@ root          = "$HOME/repos/brunch"
 default_forge = "github.com"
 EOF
 
-# Drop the acme-fullstack template.
-cat > "$XDG_CONFIG_HOME/brunch/templates/acme-fullstack.toml" <<'EOF'
-description = "Backend + frontend for typical acme fullstack tasks."
+# Drop the kybernetix-fullstack template.
+cat > "$XDG_CONFIG_HOME/brunch/templates/kybernetix-fullstack.toml" <<'EOF'
+description = "Backend + frontend for typical Kybernetix fullstack tasks."
 
 [[repo]]
-repo = "acme/backend"
+repo = "kybernetix/backend"
 
 [[repo]]
-repo = "acme/frontend"
+repo = "kybernetix/frontend"
 EOF
 
 # ---------------------------------------------------------------------------
 # Fake canonical clones with a "remote" bare repo each, so `git push -u
 # origin HEAD` actually works without touching real GitHub.
 # ---------------------------------------------------------------------------
-ACME_DIR="$HOME/repos/brunch/github.com/acme"
+KYBERNETIX_DIR="$HOME/repos/brunch/github.com/kybernetix"
 REMOTES_DIR="$DEMO_ROOT/remotes"
-mkdir -p "$ACME_DIR" "$REMOTES_DIR"
+mkdir -p "$KYBERNETIX_DIR" "$REMOTES_DIR"
 
 for repo in backend frontend; do
   bare="$REMOTES_DIR/$repo.git"
-  canonical="$ACME_DIR/$repo"
+  canonical="$KYBERNETIX_DIR/$repo"
   git init --quiet --bare "$bare"
   git init --quiet -b main "$canonical"
   (
     cd "$canonical"
     git config user.name  "brunch-demo"
     git config user.email "demo@example.invalid"
-    echo "# acme/$repo" > README.md
+    echo "# kybernetix/$repo" > README.md
     git add README.md
     git -c user.name=brunch-demo -c user.email=demo@example.invalid commit -qm "initial commit"
     git remote add origin "$bare"
@@ -149,8 +149,8 @@ if [[ "${1:-}" == "pr" && "${2:-}" == "create" ]]; then
   repo=$(basename "$(git rev-parse --show-toplevel)")
   branch=$(git rev-parse --abbrev-ref HEAD)
   num=$(( RANDOM % 200 + 1 ))
-  echo "Creating pull request for $branch into ${base:-main} in acme/$repo"
-  echo "https://github.com/acme/$repo/pull/$num"
+  echo "Creating pull request for $branch into ${base:-main} in kybernetix/$repo"
+  echo "https://github.com/kybernetix/$repo/pull/$num"
   exit 0
 fi
 exec /usr/bin/gh "$@"
@@ -280,7 +280,7 @@ EOF
 # ---------------------------------------------------------------------------
 # Steps. Each one builds a small bash session that drives the demo.
 # ---------------------------------------------------------------------------
-TASKS_DIR="$HOME/repos/acme/tasks"
+TASKS_DIR="$HOME/repos/kybernetix/tasks"
 mkdir -p "$TASKS_DIR"
 
 step_00_setup() {
@@ -289,9 +289,9 @@ demo_say 'brunch is installed; let us confirm the version and config.'
 type_cmd 'brunch --version'
 type_cmd 'cat \$XDG_CONFIG_HOME/brunch/config.toml'
 demo_say 'and the canonical clones it expects to find:'
-type_cmd 'ls \$HOME/repos/brunch/github.com/acme'
+type_cmd 'ls \$HOME/repos/brunch/github.com/kybernetix'
 demo_say 'plus the template we will use:'
-type_cmd 'cat \$XDG_CONFIG_HOME/brunch/templates/acme-fullstack.toml'
+type_cmd 'cat \$XDG_CONFIG_HOME/brunch/templates/kybernetix-fullstack.toml'
 EOF
 )"
 }
@@ -299,7 +299,7 @@ EOF
 step_01_create() {
   record 01-create "$(cat <<EOF
 type_cmd 'cd $TASKS_DIR'
-type_cmd 'brunch init $DEMO_TASK -t acme-fullstack'
+type_cmd 'brunch init $DEMO_TASK -t kybernetix-fullstack'
 demo_say 'the workspace dir + both worktrees materialised in one command.'
 type_cmd 'ls $DEMO_TASK'
 type_cmd 'cat $DEMO_TASK/brunch.toml'

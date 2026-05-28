@@ -13,8 +13,8 @@ committed alongside the markdown — but they're easy to regenerate.
 That's it. The script:
 
 1. **Spins up an isolated demo environment** under `/tmp/brunch-walkthrough/` —
-   fake `$HOME`, fake canonical clones for `acme/backend` and `acme/frontend`,
-   the `acme-fullstack` template installed.
+   fake `$HOME`, fake canonical clones for `kybernetix/backend` and `kybernetix/frontend`,
+   the `kybernetix-fullstack` template installed.
 2. **Stubs out anything network-dependent**: `gh pr create` is shimmed to
    print a plausible PR URL; `git push` targets bare repos on disk that
    pretend to be `origin`. Nothing leaves your machine.

@@ -27,14 +27,14 @@ def parse_repo_spec(raw: str, *, default_forge: str) -> RepoSpec:
     if not raw or raw.strip() != raw:
         raise RepoSpecError(
             f"repo spec must be a non-empty trimmed string (got {raw!r})",
-            hint="Use the form 'acme/api' or 'github.com/acme/api'.",
+            hint="Use the form 'kybernetix/api' or 'github.com/kybernetix/api'.",
         )
 
     parts = raw.split("/")
     if any(not p for p in parts):
         raise RepoSpecError(
             f"repo spec {raw!r} has empty segments",
-            hint="Use the form 'acme/api' or 'github.com/acme/api'.",
+            hint="Use the form 'kybernetix/api' or 'github.com/kybernetix/api'.",
         )
 
     if len(parts) == 2:
@@ -45,7 +45,7 @@ def parse_repo_spec(raw: str, *, default_forge: str) -> RepoSpec:
     else:
         raise RepoSpecError(
             f"repo spec {raw!r} has {len(parts)} segments, expected 2 or 3",
-            hint="Use the form 'acme/api' or 'github.com/acme/api'.",
+            hint="Use the form 'kybernetix/api' or 'github.com/kybernetix/api'.",
         )
 
     return RepoSpec(forge=forge, org=org, name=name)

@@ -1,7 +1,7 @@
 # kybernetix-fullstack
 #
-# A full-stack Kybernetix task: backend + frontend. Each worktree is created on the
-# workspace-named branch starting from main.
+# Two-repo slice of the kbrntx product: backend + frontend. Each worktree
+# is created on the workspace-named branch starting from main.
 #
 # Usage:
 #   cp docs/examples/templates/kybernetix-fullstack.toml ~/.config/brunch/templates/

@@ -13,7 +13,9 @@ from brunch.services.add import add_repo
 
 
 def add(
-    repo: str = typer.Argument(..., help="Repo spec, e.g. 'acme/api' or 'github.com/acme/api'."),
+    repo: str = typer.Argument(
+        ..., help="Repo spec, e.g. 'kybernetix/api' or 'github.com/kybernetix/api'."
+    ),
     branch: str | None = typer.Option(
         None, "--branch", help="Branch to check out (default: workspace name)."
     ),

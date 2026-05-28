@@ -42,7 +42,7 @@ def _write_manifest(ws: Path, *, repos: list[tuple[str, str, str]]) -> Workspace
 def _install_canonical(
     make_canonical: Callable[..., Path], canonical_root: Path, *, name: str
 ) -> Path:
-    target = canonical_root / "github.com" / "acme" / name
+    target = canonical_root / "github.com" / "kybernetix" / name
     target.parent.mkdir(parents=True, exist_ok=True)
     shutil.move(str(make_canonical(name)), str(target))
     return target
@@ -82,7 +82,7 @@ class TestRegressionUserReportedSiblingNuke:
         sibling.mkdir()
         (sibling / "notes.md").write_text("important\n", encoding="utf-8")
 
-        loc = _write_manifest(ws, repos=[("acme/api", "feat", "main")])
+        loc = _write_manifest(ws, repos=[("kybernetix/api", "feat", "main")])
         outcome = rm_workspace(loc, _config(canonical_root))
 
         assert outcome.action == "partial"
@@ -115,7 +115,7 @@ class TestPreservedContent:
         canonical = _install_canonical(make_canonical, canonical_root, name="api")
         ws = make_workspace()
         worktree_factory(canonical, ws / "api", branch="feat", base="main")
-        loc = _write_manifest(ws, repos=[("acme/api", "feat", "main")])
+        loc = _write_manifest(ws, repos=[("kybernetix/api", "feat", "main")])
         return ws, loc, _config(canonical_root)
 
     def test_sibling_file_preserved(
@@ -250,7 +250,7 @@ class TestEmptyWorkspaceFullyRemoves:
         canonical = _install_canonical(make_canonical, canonical_root, name="api")
         ws = make_workspace()
         worktree_factory(canonical, ws / "api", branch="feat", base="main")
-        loc = _write_manifest(ws, repos=[("acme/api", "feat", "main")])
+        loc = _write_manifest(ws, repos=[("kybernetix/api", "feat", "main")])
 
         outcome = rm_workspace(loc, _config(canonical_root))
         assert outcome.action == "removed"
@@ -279,7 +279,7 @@ class TestForceWithPreservedContent:
         (ws / "scratch.md").write_text("scratch\n", encoding="utf-8")
         # Make the worktree dirty so --force is exercised.
         (ws / "api" / "dirty.txt").write_text("dirty\n", encoding="utf-8")
-        loc = _write_manifest(ws, repos=[("acme/api", "feat", "main")])
+        loc = _write_manifest(ws, repos=[("kybernetix/api", "feat", "main")])
 
         outcome = rm_workspace(loc, _config(canonical_root), force=True)
         # Forced + sibling content present → partial: archive succeeded, manifest
@@ -311,7 +311,7 @@ class TestDryRunPreservedEnumeration:
         ws = make_workspace()
         worktree_factory(canonical, ws / "api", branch="feat", base="main")
         (ws / "TODO.md").write_text("x\n", encoding="utf-8")
-        loc = _write_manifest(ws, repos=[("acme/api", "feat", "main")])
+        loc = _write_manifest(ws, repos=[("kybernetix/api", "feat", "main")])
 
         outcome = rm_workspace(loc, _config(canonical_root), dry_run=True)
         assert outcome.dry_run is True
@@ -340,7 +340,7 @@ class TestArchiveFailureFailsClosed:
         canonical = _install_canonical(make_canonical, canonical_root, name="api")
         ws = make_workspace()
         worktree_factory(canonical, ws / "api", branch="feat", base="main")
-        loc = _write_manifest(ws, repos=[("acme/api", "feat", "main")])
+        loc = _write_manifest(ws, repos=[("kybernetix/api", "feat", "main")])
 
         with unittest.mock.patch(
             "brunch.services.rm.create_workspace_archive",
@@ -434,7 +434,7 @@ class TestReadOnlySibling:
         ro = ws / "locked.txt"
         ro.write_text("locked\n", encoding="utf-8")
         os.chmod(ro, 0o444)  # read-only
-        loc = _write_manifest(ws, repos=[("acme/api", "feat", "main")])
+        loc = _write_manifest(ws, repos=[("kybernetix/api", "feat", "main")])
 
         try:
             outcome = rm_workspace(loc, _config(canonical_root))

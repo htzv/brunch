@@ -23,7 +23,7 @@ class TestMaterialiseTemplate:
             description = "desc"
 
             [[repo]]
-            repo = "acme/api"
+            repo = "kybernetix/api"
             branch = "explicit"
             base = "develop"
             """,
@@ -32,7 +32,7 @@ class TestMaterialiseTemplate:
         assert m.name == "task-1"
         assert m.description == "desc"
         assert len(m.repos) == 1
-        assert m.repos[0].repo == "acme/api"
+        assert m.repos[0].repo == "kybernetix/api"
         assert m.repos[0].branch == "explicit"
         assert m.repos[0].base == "develop"
 
@@ -42,7 +42,7 @@ class TestMaterialiseTemplate:
             "t2",
             """
             [[repo]]
-            repo = "acme/api"
+            repo = "kybernetix/api"
             base = "main"
             """,
         )
@@ -55,7 +55,7 @@ class TestMaterialiseTemplate:
             "t3",
             """
             [[repo]]
-            repo = "acme/api"
+            repo = "kybernetix/api"
             """,
         )
         m = materialise_template("t3", workspace_name="task-x")
@@ -66,7 +66,7 @@ class TestMaterialiseTemplate:
         _write_template(
             isolated_home,
             "t4",
-            'name = "ignored"\n[[repo]]\nrepo = "acme/api"\n',
+            'name = "ignored"\n[[repo]]\nrepo = "kybernetix/api"\n',
         )
         m = materialise_template("t4", workspace_name="actual")
         assert m.name == "actual"

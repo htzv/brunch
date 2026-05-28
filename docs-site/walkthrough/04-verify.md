@@ -47,8 +47,8 @@ foreach  task-1234-add-export
          path    /home/you/.../task-1234-add-export
          command ['pytest', '-q']
 
-  OK         backend  (acme/backend) (exit 0)
-  OK         frontend  (acme/frontend) (exit 0)
+  OK         backend  (kybernetix/backend) (exit 0)
+  OK         frontend  (kybernetix/frontend) (exit 0)
 ```
 
 If any repo's command exits non-zero, the run stops by default. Pass

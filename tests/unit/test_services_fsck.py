@@ -43,13 +43,13 @@ class TestFsckHappyPath:
     ) -> None:
         # Lay out a canonical at the expected ghq-style path.
         canonical_root = tmp_path / "canonical-root"
-        api_canonical = canonical_root / "github.com" / "acme" / "api"
+        api_canonical = canonical_root / "github.com" / "kybernetix" / "api"
         api_canonical.parent.mkdir(parents=True)
         shutil.move(str(make_canonical("api")), str(api_canonical))
 
         ws = make_workspace("clean-ws")
         worktree_factory(api_canonical, ws / "api", branch="feat", base="main")
-        loc = _write_manifest(ws, repos=[("acme/api", "feat", "main")])
+        loc = _write_manifest(ws, repos=[("kybernetix/api", "feat", "main")])
 
         report = fsck_workspace(loc, _config_for(canonical_root))
         assert report.findings == []
@@ -60,7 +60,7 @@ class TestFsckHappyPath:
 class TestFsckCanonicalChecks:
     def test_canonical_missing(self, make_workspace: Callable[..., Path], tmp_path: Path) -> None:
         ws = make_workspace("ws")
-        loc = _write_manifest(ws, repos=[("acme/missing-repo", "f", "main")])
+        loc = _write_manifest(ws, repos=[("kybernetix/missing-repo", "f", "main")])
         report = fsck_workspace(loc, _config_for(tmp_path / "nowhere"))
         codes = _findings_by_code(report.findings)
         assert "canonical-missing" in codes
@@ -70,11 +70,11 @@ class TestFsckCanonicalChecks:
         self, make_workspace: Callable[..., Path], tmp_path: Path
     ) -> None:
         canonical_root = tmp_path / "canonical-root"
-        fake = canonical_root / "github.com" / "acme" / "api"
+        fake = canonical_root / "github.com" / "kybernetix" / "api"
         fake.mkdir(parents=True)
         # No git init: directory exists, but not a repo.
         ws = make_workspace("ws")
-        loc = _write_manifest(ws, repos=[("acme/api", "f", "main")])
+        loc = _write_manifest(ws, repos=[("kybernetix/api", "f", "main")])
         report = fsck_workspace(loc, _config_for(canonical_root))
         codes = _findings_by_code(report.findings)
         assert "canonical-not-a-repo" in codes
@@ -88,12 +88,12 @@ class TestFsckWorktreeChecks:
         tmp_path: Path,
     ) -> None:
         canonical_root = tmp_path / "canonical-root"
-        api_canonical = canonical_root / "github.com" / "acme" / "api"
+        api_canonical = canonical_root / "github.com" / "kybernetix" / "api"
         api_canonical.parent.mkdir(parents=True)
         shutil.move(str(make_canonical("api")), str(api_canonical))
 
         ws = make_workspace("ws")
-        loc = _write_manifest(ws, repos=[("acme/api", "feat", "main")])
+        loc = _write_manifest(ws, repos=[("kybernetix/api", "feat", "main")])
         report = fsck_workspace(loc, _config_for(canonical_root))
         codes = _findings_by_code(report.findings)
         assert "worktree-missing" in codes
@@ -106,13 +106,13 @@ class TestFsckWorktreeChecks:
         tmp_path: Path,
     ) -> None:
         canonical_root = tmp_path / "canonical-root"
-        api_canonical = canonical_root / "github.com" / "acme" / "api"
+        api_canonical = canonical_root / "github.com" / "kybernetix" / "api"
         api_canonical.parent.mkdir(parents=True)
         shutil.move(str(make_canonical("api")), str(api_canonical))
 
         ws = make_workspace("ws")
         worktree_factory(api_canonical, ws / "api", branch="actual", base="main")
-        loc = _write_manifest(ws, repos=[("acme/api", "declared", "main")])
+        loc = _write_manifest(ws, repos=[("kybernetix/api", "declared", "main")])
         report = fsck_workspace(loc, _config_for(canonical_root))
         codes = _findings_by_code(report.findings)
         assert "branch-drift" in codes
@@ -129,7 +129,7 @@ class TestFsckCanonicalWideChecks:
         tmp_path: Path,
     ) -> None:
         canonical_root = tmp_path / "canonical-root"
-        api_canonical = canonical_root / "github.com" / "acme" / "api"
+        api_canonical = canonical_root / "github.com" / "kybernetix" / "api"
         api_canonical.parent.mkdir(parents=True)
         shutil.move(str(make_canonical("api")), str(api_canonical))
 
@@ -141,7 +141,7 @@ class TestFsckCanonicalWideChecks:
         ws = make_workspace("ws")
         # Manifest references the same canonical so we exercise its worktree-list.
         worktree_factory(api_canonical, ws / "api", branch="alive", base="main")
-        loc = _write_manifest(ws, repos=[("acme/api", "alive", "main")])
+        loc = _write_manifest(ws, repos=[("kybernetix/api", "alive", "main")])
         report = fsck_workspace(loc, _config_for(canonical_root))
         codes = _findings_by_code(report.findings)
         assert "dangling-worktree-ref" in codes
@@ -156,7 +156,7 @@ class TestFsckExtraSubdirs:
         tmp_path: Path,
     ) -> None:
         canonical_root = tmp_path / "canonical-root"
-        api_canonical = canonical_root / "github.com" / "acme" / "api"
+        api_canonical = canonical_root / "github.com" / "kybernetix" / "api"
         api_canonical.parent.mkdir(parents=True)
         shutil.move(str(make_canonical("api")), str(api_canonical))
 
@@ -165,7 +165,7 @@ class TestFsckExtraSubdirs:
         # Add a stray worktree that the manifest doesn't know about.
         worktree_factory(api_canonical, ws / "stray", branch="stray", base="main")
 
-        loc = _write_manifest(ws, repos=[("acme/api", "feat", "main")])
+        loc = _write_manifest(ws, repos=[("kybernetix/api", "feat", "main")])
         report = fsck_workspace(loc, _config_for(canonical_root))
         codes = _findings_by_code(report.findings)
         assert "extra-worktree" in codes
@@ -179,7 +179,7 @@ class TestFsckExtraSubdirs:
         tmp_path: Path,
     ) -> None:
         canonical_root = tmp_path / "canonical-root"
-        api_canonical = canonical_root / "github.com" / "acme" / "api"
+        api_canonical = canonical_root / "github.com" / "kybernetix" / "api"
         api_canonical.parent.mkdir(parents=True)
         shutil.move(str(make_canonical("api")), str(api_canonical))
 
@@ -187,7 +187,7 @@ class TestFsckExtraSubdirs:
         worktree_factory(api_canonical, ws / "api", branch="feat", base="main")
         (ws / "notes").mkdir()
         (ws / "notes" / "README.md").write_text("just notes\n", encoding="utf-8")
-        loc = _write_manifest(ws, repos=[("acme/api", "feat", "main")])
+        loc = _write_manifest(ws, repos=[("kybernetix/api", "feat", "main")])
         report = fsck_workspace(loc, _config_for(canonical_root))
         codes = _findings_by_code(report.findings)
         assert "extra-worktree" not in codes

@@ -10,10 +10,10 @@ backend and the frontend lives in a single directory you can hand to an
 agent or `cd` into.
 
 ```
-~/repos/kybernetix.example/tasks/task-1234-add-export/
+~/tasks/task-1234-add-export/
 ├── brunch.toml
-├── backend/       # git worktree of acme/backend on `task-1234-add-export`
-└── frontend/      # git worktree of acme/frontend on `task-1234-add-export`
+├── backend/       # git worktree of kybernetix/backend on `task-1234-add-export`
+└── frontend/      # git worktree of kybernetix/frontend on `task-1234-add-export`
 ```
 
 ## Why

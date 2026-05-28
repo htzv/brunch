@@ -18,7 +18,7 @@ runner = CliRunner()
 def _install_canonical(
     make_canonical: Callable[..., Path], canonical_root: Path, *, name: str
 ) -> Path:
-    target = canonical_root / "github.com" / "acme" / name
+    target = canonical_root / "github.com" / "kybernetix" / name
     target.parent.mkdir(parents=True, exist_ok=True)
     shutil.move(str(make_canonical(name)), str(target))
     return target
@@ -79,8 +79,8 @@ class TestAdoptCommand:
         assert manifest.is_file()
         text = manifest.read_text(encoding="utf-8")
         assert 'name = "tech-1796"' in text
-        assert 'repo = "acme/api"' in text
-        assert 'repo = "acme/dashboard"' in text
+        assert 'repo = "kybernetix/api"' in text
+        assert 'repo = "kybernetix/dashboard"' in text
 
     def test_adopt_explicit_name(
         self,
@@ -106,7 +106,7 @@ class TestAdoptCommand:
         payload = json.loads(result.output)
         assert payload["action"] == "adopted"
         assert payload["name"] == "tech-1796"
-        assert payload["discovered"][0]["repo"] == "acme/api"
+        assert payload["discovered"][0]["repo"] == "kybernetix/api"
         # Sync + fsck both ran and were clean.
         assert all(a["action"] != "error" for a in payload["sync_report"]["actions"])
         assert payload["fsck_report"]["findings"] == []
@@ -152,7 +152,7 @@ class TestAdoptCommand:
         canonical_root = tmp_path / "configured"
         canonical_root.mkdir()
         elsewhere = tmp_path / "elsewhere"
-        canonical = elsewhere / "github.com" / "acme" / "api"
+        canonical = elsewhere / "github.com" / "kybernetix" / "api"
         canonical.parent.mkdir(parents=True)
         shutil.move(str(make_canonical("api")), str(canonical))
         ws = isolated_home / "wandering"

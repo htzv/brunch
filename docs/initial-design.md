@@ -69,8 +69,8 @@ Example:
 ```
 ~/repos/brunch/
 ├── github.com/
-│   ├── acme/
-│   │   ├── api/         <-- canonical clone of github.com/acme/api
+│   ├── kybernetix/
+│   │   ├── api/         <-- canonical clone of github.com/kybernetix/api
 │   │   └── dashboard/
 │   └── another-org/
 │       └── …
@@ -90,8 +90,8 @@ A workspace dir looks like:
 ```
 task-1234-billing-flow/
 ├── brunch.toml           <-- workspace marker + manifest
-├── api/                  <-- git worktree of acme/api
-└── dashboard/            <-- git worktree of acme/dashboard
+├── api/                  <-- git worktree of kybernetix/api
+└── dashboard/            <-- git worktree of kybernetix/dashboard
 ```
 
 A workspace set looks like:
@@ -122,12 +122,12 @@ name = "task-1234-billing-flow"
 description = "Add usage-based billing to API; surface in dashboard."
 
 [[repo]]
-repo   = "github.com/acme/api"  # forge/org/repo; forge defaults to github.com
+repo   = "github.com/kybernetix/api"  # forge/org/repo; forge defaults to github.com
 branch = "task-1234-billing-flow"
 base   = "main"
 
 [[repo]]
-repo   = "acme/dashboard"        # short form (forge inferred)
+repo   = "kybernetix/dashboard"        # short form (forge inferred)
 branch = "task-1234-billing-flow"
 base   = "main"
 ```
@@ -189,17 +189,17 @@ A template is a partial workspace manifest, stored as a TOML file at:
 
 It has the same schema as `brunch.toml` minus `name`, plus the convention that any `[[repo]]` entry omitting `branch` will have it defaulted to the workspace name at materialisation time.
 
-Example (`~/.config/brunch/templates/acme-fullstack.toml`):
+Example (`~/.config/brunch/templates/kybernetix-fullstack.toml`):
 
 ```toml
 description = "Backend + dashboard, default for Acme fullstack tasks."
 
 [[repo]]
-repo = "acme/api"
+repo = "kybernetix/api"
 base = "main"
 
 [[repo]]
-repo = "acme/dashboard"
+repo = "kybernetix/dashboard"
 base = "main"
 ```
 
@@ -213,7 +213,7 @@ No `brunch templates list/show/edit` commands. Templates are files in a known di
 
 ### 5.4 Example templates
 
-A handful of starter templates for common Kybernetix workspaces ship in
+A handful of starter templates for a fictional Kybernetix product ship in
 [`docs/examples/templates/`](examples/templates/) with installation
 instructions and a per-template summary. They are documentation samples, not
 auto-installed — copy any of them into `~/.config/brunch/templates/` to

@@ -18,7 +18,7 @@ runner = CliRunner()
 def _install_canonical(
     make_canonical: Callable[..., Path], canonical_root: Path, *, name: str
 ) -> Path:
-    target = canonical_root / "github.com" / "acme" / name
+    target = canonical_root / "github.com" / "kybernetix" / name
     target.parent.mkdir(parents=True, exist_ok=True)
     shutil.move(str(make_canonical(name)), str(target))
     return target
@@ -76,9 +76,9 @@ class TestInitE2E:
             """
             description = "backend + dashboard"
             [[repo]]
-            repo = "acme/api"
+            repo = "kybernetix/api"
             [[repo]]
-            repo = "acme/dashboard"
+            repo = "kybernetix/dashboard"
             """,
         )
 
@@ -117,7 +117,7 @@ class TestAddE2E:
         ws = isolated_home / "task-1"
 
         # Then add.
-        result = runner.invoke(app, ["add", "acme/api", "-w", str(ws)])
+        result = runner.invoke(app, ["add", "kybernetix/api", "-w", str(ws)])
         assert result.exit_code == 0, result.output
         assert (ws / "api" / ".git").exists()
 
@@ -141,7 +141,7 @@ class TestAddE2E:
         runner.invoke(app, ["init", "task-1", "-p", str(isolated_home)])
         ws = isolated_home / "task-1"
 
-        result = runner.invoke(app, ["add", "acme/api", "-w", str(ws), "--dry-run"])
+        result = runner.invoke(app, ["add", "kybernetix/api", "-w", str(ws), "--dry-run"])
         assert result.exit_code == 0
         assert not (ws / "api").exists()
         assert "would add" in result.output
@@ -161,7 +161,8 @@ class TestSyncE2E:
         ws = isolated_home / "task-1"
         ws.mkdir()
         (ws / "brunch.toml").write_text(
-            'name = "task-1"\n\n[[repo]]\nrepo = "acme/api"\nbranch = "feat"\nbase = "main"\n',
+            'name = "task-1"\n\n[[repo]]\n'
+            'repo = "kybernetix/api"\nbranch = "feat"\nbase = "main"\n',
             encoding="utf-8",
         )
 
@@ -181,7 +182,7 @@ class TestSyncE2E:
         _write_config(isolated_home, root=canonical_root)
         runner.invoke(app, ["init", "task-1", "-p", str(isolated_home)])
         ws = isolated_home / "task-1"
-        runner.invoke(app, ["add", "acme/api", "-w", str(ws)])
+        runner.invoke(app, ["add", "kybernetix/api", "-w", str(ws)])
 
         result = runner.invoke(app, ["sync", "-w", str(ws)])
         assert result.exit_code == 0
@@ -200,7 +201,8 @@ class TestSyncE2E:
         ws = isolated_home / "task-1"
         ws.mkdir()
         (ws / "brunch.toml").write_text(
-            'name = "task-1"\n\n[[repo]]\nrepo = "acme/api"\nbranch = "feat"\nbase = "main"\n',
+            'name = "task-1"\n\n[[repo]]\n'
+            'repo = "kybernetix/api"\nbranch = "feat"\nbase = "main"\n',
             encoding="utf-8",
         )
 
@@ -220,7 +222,7 @@ class TestSyncE2E:
         _write_config(isolated_home, root=canonical_root)
         runner.invoke(app, ["init", "task-1", "-p", str(isolated_home)])
         ws = isolated_home / "task-1"
-        runner.invoke(app, ["add", "acme/api", "-w", str(ws)])
+        runner.invoke(app, ["add", "kybernetix/api", "-w", str(ws)])
 
         # Switch the worktree to a different branch.
         subprocess.run(
@@ -252,8 +254,8 @@ class TestEndToEndFlow:
         ws = isolated_home / "billing-flow"
 
         # add two repos
-        assert runner.invoke(app, ["add", "acme/api", "-w", str(ws)]).exit_code == 0
-        assert runner.invoke(app, ["add", "acme/dashboard", "-w", str(ws)]).exit_code == 0
+        assert runner.invoke(app, ["add", "kybernetix/api", "-w", str(ws)]).exit_code == 0
+        assert runner.invoke(app, ["add", "kybernetix/dashboard", "-w", str(ws)]).exit_code == 0
 
         # status / sync / fsck all green
         s = runner.invoke(app, ["status", "-w", str(ws), "--json"])

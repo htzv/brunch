@@ -24,7 +24,7 @@ def _write_manifest(ws: Path, *, repos: list[tuple[str, str, str]]) -> Workspace
 def _install_canonical(
     make_canonical: Callable[..., Path], canonical_root: Path, *, name: str
 ) -> Path:
-    target = canonical_root / "github.com" / "acme" / name
+    target = canonical_root / "github.com" / "kybernetix" / name
     target.parent.mkdir(parents=True, exist_ok=True)
     shutil.move(str(make_canonical(name)), str(target))
     return target
@@ -53,7 +53,7 @@ class TestRmCleanWorkspace:
         canonical = _install_canonical(make_canonical, canonical_root, name="api")
         ws = make_workspace()
         worktree_factory(canonical, ws / "api", branch="feat", base="main")
-        loc = _write_manifest(ws, repos=[("acme/api", "feat", "main")])
+        loc = _write_manifest(ws, repos=[("kybernetix/api", "feat", "main")])
 
         outcome = rm_workspace(loc, _config(canonical_root))
         assert outcome.action == "removed"
@@ -80,7 +80,7 @@ class TestRmCleanWorkspace:
         canonical = _install_canonical(make_canonical, canonical_root, name="api")
         ws = make_workspace()
         worktree_factory(canonical, ws / "api", branch="feat", base="main")
-        loc = _write_manifest(ws, repos=[("acme/api", "feat", "main")])
+        loc = _write_manifest(ws, repos=[("kybernetix/api", "feat", "main")])
 
         outcome = rm_workspace(loc, _config(canonical_root), dry_run=True)
         assert outcome.action == "would_remove"
@@ -101,7 +101,7 @@ class TestRmRefuseDirty:
         ws = make_workspace()
         worktree_factory(canonical, ws / "api", branch="feat", base="main")
         (ws / "api" / "README.md").write_text("dirty\n", encoding="utf-8")
-        loc = _write_manifest(ws, repos=[("acme/api", "feat", "main")])
+        loc = _write_manifest(ws, repos=[("kybernetix/api", "feat", "main")])
 
         outcome = rm_workspace(loc, _config(canonical_root))
         assert outcome.action == "refused"
@@ -120,7 +120,7 @@ class TestRmRefuseDirty:
         ws = make_workspace()
         worktree_factory(canonical, ws / "api", branch="feat", base="main")
         (ws / "api" / "new.txt").write_text("hi\n", encoding="utf-8")
-        loc = _write_manifest(ws, repos=[("acme/api", "feat", "main")])
+        loc = _write_manifest(ws, repos=[("kybernetix/api", "feat", "main")])
 
         outcome = rm_workspace(loc, _config(canonical_root))
         assert outcome.action == "refused"
@@ -146,7 +146,7 @@ class TestRmRefuseDirty:
             check=True,
             capture_output=True,
         )
-        loc = _write_manifest(ws, repos=[("acme/api", "feat", "main")])
+        loc = _write_manifest(ws, repos=[("kybernetix/api", "feat", "main")])
         outcome = rm_workspace(loc, _config(canonical_root))
         assert outcome.action == "refused"
         risk = outcome.risks[0]
@@ -168,7 +168,7 @@ class TestRmForce:
         ws = make_workspace()
         worktree_factory(canonical, ws / "api", branch="feat", base="main")
         (ws / "api" / "dirty.txt").write_text("dirty\n", encoding="utf-8")
-        loc = _write_manifest(ws, repos=[("acme/api", "feat", "main")])
+        loc = _write_manifest(ws, repos=[("kybernetix/api", "feat", "main")])
 
         outcome = rm_workspace(loc, _config(canonical_root), force=True)
         assert outcome.action == "removed"
@@ -190,7 +190,7 @@ class TestRmForce:
         canonical = _install_canonical(make_canonical, canonical_root, name="api")
         ws = make_workspace()
         worktree_factory(canonical, ws / "api", branch="feat", base="main")
-        loc = _write_manifest(ws, repos=[("acme/api", "feat", "main")])
+        loc = _write_manifest(ws, repos=[("kybernetix/api", "feat", "main")])
 
         outcome = rm_workspace(loc, _config(canonical_root), force=True)
         assert outcome.action == "removed"

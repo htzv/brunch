@@ -23,7 +23,7 @@ runner = CliRunner()
 def _install_canonical(
     make_canonical: Callable[..., Path], canonical_root: Path, *, name: str
 ) -> Path:
-    target = canonical_root / "github.com" / "acme" / name
+    target = canonical_root / "github.com" / "kybernetix" / name
     target.parent.mkdir(parents=True, exist_ok=True)
     shutil.move(str(make_canonical(name)), str(target))
     return target
@@ -49,7 +49,7 @@ def _setup(
     runner.invoke(app, ["init", name, "-p", str(isolated_home)])
     ws = isolated_home / name
     for repo_name in repos or ["api"]:
-        runner.invoke(app, ["add", f"acme/{repo_name}", "-w", str(ws)])
+        runner.invoke(app, ["add", f"kybernetix/{repo_name}", "-w", str(ws)])
     return ws
 
 

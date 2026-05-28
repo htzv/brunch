@@ -28,14 +28,15 @@ def _setup_clean(
 ) -> Path:
     canonical_root = home / "repos" / "brunch"
     _config_with(home, root=canonical_root)
-    api_canonical = canonical_root / "github.com" / "acme" / "api"
+    api_canonical = canonical_root / "github.com" / "kybernetix" / "api"
     api_canonical.parent.mkdir(parents=True)
     shutil.move(str(make_canonical("api")), str(api_canonical))
 
     ws = make_workspace()
     worktree_factory(api_canonical, ws / "api", branch="feat", base="main")
     (ws / "brunch.toml").write_text(
-        f'name = "{ws.name}"\n\n[[repo]]\nrepo = "acme/api"\nbranch = "feat"\nbase = "main"\n',
+        f'name = "{ws.name}"\n\n[[repo]]\n'
+        'repo = "kybernetix/api"\nbranch = "feat"\nbase = "main"\n',
         encoding="utf-8",
     )
     return ws
@@ -63,7 +64,8 @@ class TestFsckE2E:
         _config_with(isolated_home, root=isolated_home / "nowhere")
         ws = make_workspace()
         (ws / "brunch.toml").write_text(
-            f'name = "{ws.name}"\n\n[[repo]]\nrepo = "acme/api"\nbranch = "f"\nbase = "main"\n',
+            f'name = "{ws.name}"\n\n[[repo]]\n'
+            'repo = "kybernetix/api"\nbranch = "f"\nbase = "main"\n',
             encoding="utf-8",
         )
         result = runner.invoke(app, ["fsck", "-w", str(ws)])

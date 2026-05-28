@@ -1,19 +1,20 @@
 # kybernetix-billing
 #
-# Billing work: API (rest-style), PDF report generation, and the platform
-# backend for any integration touchpoints. Adjust to taste.
+# Multitenant billing slice of the kbrntx product. Touches the backend
+# (tenant API + quota enforcement), the frontend (billing dashboards), and
+# the data-pipelines workers (usage rollups + invoicing jobs).
 #
 # Usage:
 #   cp docs/examples/templates/kybernetix-billing.toml ~/.config/brunch/templates/
-#   brunch init task-2345-climate-x -t kybernetix-billing
+#   brunch init task-2345-billing-quotas -t kybernetix-billing
 
-description = "Billing: API + backend service + backend integration."
-
-[[repo]]
-repo = "kybernetix/backend"
+description = "Kybernetix billing slice: backend + frontend + data-pipelines."
 
 [[repo]]
 repo = "kybernetix/backend"
 
 [[repo]]
-repo = "kybernetix/backend"
+repo = "kybernetix/frontend"
+
+[[repo]]
+repo = "kybernetix/data-pipelines"

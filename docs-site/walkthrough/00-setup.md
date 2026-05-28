@@ -24,7 +24,7 @@ at `<root>/<forge>/<org>/<repo>` (the same convention as
 ```
 ~/repos/brunch/
 └── github.com/
-    └── acme/
+    └── kybernetix/
         ├── backend/
         └── frontend/
 ```
@@ -41,22 +41,22 @@ To populate the tree, use whichever tool you prefer:
 === "ghq"
 
     ```bash
-    ghq get github.com/acme/backend
-    ghq get github.com/acme/frontend
+    ghq get github.com/kybernetix/backend
+    ghq get github.com/kybernetix/frontend
     ```
 
 === "gh CLI"
 
     ```bash
-    gh repo clone acme/backend  ~/repos/brunch/github.com/acme/backend
-    gh repo clone acme/frontend ~/repos/brunch/github.com/acme/frontend
+    gh repo clone kybernetix/backend  ~/repos/brunch/github.com/kybernetix/backend
+    gh repo clone kybernetix/frontend ~/repos/brunch/github.com/kybernetix/frontend
     ```
 
 === "plain git"
 
     ```bash
-    git clone git@github.com:acme/backend.git  ~/repos/brunch/github.com/acme/backend
-    git clone git@github.com:acme/frontend.git ~/repos/brunch/github.com/acme/frontend
+    git clone git@github.com:kybernetix/backend.git  ~/repos/brunch/github.com/kybernetix/backend
+    git clone git@github.com:kybernetix/frontend.git ~/repos/brunch/github.com/kybernetix/frontend
     ```
 
 ## Install a workspace template
@@ -64,26 +64,27 @@ To populate the tree, use whichever tool you prefer:
 A *template* is a partial brunch manifest at
 `~/.config/brunch/templates/<id>.toml`. For our two-repo scenario:
 
-```toml title="~/.config/brunch/templates/acme-fullstack.toml"
-description = "Backend + frontend for typical acme fullstack tasks."
+```toml title="~/.config/brunch/templates/kybernetix-fullstack.toml"
+description = "Backend + frontend for typical Kybernetix fullstack tasks."
 
 [[repo]]
-repo = "acme/backend"
+repo = "kybernetix/backend"
 
 [[repo]]
-repo = "acme/frontend"
+repo = "kybernetix/frontend"
 ```
 
 That's it — no `name`, no `branch` (it defaults to the workspace name at
 materialisation time), no `base` (defaults to `"main"`). The template
 just declares "this kind of workspace includes these two repos."
 
-!!! tip "Kybernetix folks"
+!!! tip "Starter templates"
     The repository ships starter templates at
     [`docs/examples/templates/`](https://github.com/htzv/brunch/tree/main/docs/examples/templates) —
     `kybernetix-fullstack`, `kybernetix-billing`, `kybernetix-data-pipeline`,
     `kybernetix-platform-ops`. Copy any of them into
-    `~/.config/brunch/templates/` and they're ready to use.
+    `~/.config/brunch/templates/` and they're ready to use, or use them
+    as templates (no pun intended) for your own org's set.
 
 ## The recorded cast
 

@@ -20,7 +20,7 @@ from brunch.services.adopt import (
 def _install_canonical(
     make_canonical: Callable[..., Path], canonical_root: Path, *, name: str
 ) -> Path:
-    target = canonical_root / "github.com" / "acme" / name
+    target = canonical_root / "github.com" / "kybernetix" / name
     target.parent.mkdir(parents=True, exist_ok=True)
     shutil.move(str(make_canonical(name)), str(target))
     return target
@@ -76,15 +76,15 @@ class TestReadGitdirCanonical:
 class TestReverseResolve:
     def test_three_part_canonical_resolves(self, tmp_path: Path) -> None:
         root = tmp_path / "repos"
-        canonical = root / "github.com" / "acme" / "api"
+        canonical = root / "github.com" / "kybernetix" / "api"
         canonical.mkdir(parents=True)
         spec = _reverse_resolve(canonical.resolve(), root)
-        assert spec == RepoSpec(forge="github.com", org="acme", name="api")
+        assert spec == RepoSpec(forge="github.com", org="kybernetix", name="api")
 
     def test_rejects_canonical_outside_root(self, tmp_path: Path) -> None:
         root = tmp_path / "repos"
         root.mkdir()
-        canonical = tmp_path / "elsewhere" / "acme" / "api"
+        canonical = tmp_path / "elsewhere" / "kybernetix" / "api"
         canonical.mkdir(parents=True)
         with pytest.raises(BrunchError, match="not under the configured root"):
             _reverse_resolve(canonical.resolve(), root)
@@ -144,7 +144,7 @@ class TestAdoptHappyPath:
         assert len(outcome.discovered) == 2
         # Default forge → short spec form.
         specs = {e.repo for e in outcome.discovered}
-        assert specs == {"acme/api", "acme/dashboard"}
+        assert specs == {"kybernetix/api", "kybernetix/dashboard"}
         # Manifest written.
         manifest = load_workspace_manifest(target / "brunch.toml")
         assert manifest.name == "task-1"
@@ -162,7 +162,7 @@ class TestAdoptHappyPath:
         make_canonical: Callable[..., Path],
     ) -> None:
         canonical_root = tmp_path / "canonical-root"
-        canonical = canonical_root / "gitlab.internal" / "acme" / "api"
+        canonical = canonical_root / "gitlab.internal" / "kybernetix" / "api"
         canonical.parent.mkdir(parents=True)
         shutil.move(str(make_canonical("api")), str(canonical))
         target = tmp_path / "task-X"
@@ -170,7 +170,7 @@ class TestAdoptHappyPath:
         _add_worktree(canonical, target / "api", branch="feat")
 
         outcome = adopt_workspace(target, name="task-X", config=_config(canonical_root))
-        assert outcome.discovered[0].repo == "gitlab.internal/acme/api"
+        assert outcome.discovered[0].repo == "gitlab.internal/kybernetix/api"
 
     def test_dry_run_writes_nothing(
         self,
@@ -247,7 +247,7 @@ class TestAdoptSkipsAndErrors:
         canonical_root.mkdir()
         elsewhere = tmp_path / "elsewhere"
         elsewhere.mkdir()
-        canonical = elsewhere / "github.com" / "acme" / "api"
+        canonical = elsewhere / "github.com" / "kybernetix" / "api"
         canonical.parent.mkdir(parents=True)
         shutil.move(str(make_canonical("api")), str(canonical))
 
