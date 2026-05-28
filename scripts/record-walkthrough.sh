@@ -280,7 +280,7 @@ EOF
 # ---------------------------------------------------------------------------
 # Steps. Each one builds a small bash session that drives the demo.
 # ---------------------------------------------------------------------------
-TASKS_DIR="$HOME/repos/kybernetix/tasks"
+TASKS_DIR="$HOME/tasks"
 mkdir -p "$TASKS_DIR"
 
 step_00_setup() {
