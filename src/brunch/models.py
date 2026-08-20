@@ -49,6 +49,28 @@ class RepoEntry(BaseModel):
     base: str = Field(description="Branch this was started from / should be rebased onto.")
 
 
+AgentKind = Literal["claude", "opencode"]
+
+
+class AgentEntry(BaseModel):
+    """A registered agent conversation — one ``[[agent]]`` entry in a manifest.
+
+    Machine-local: ``session`` is a native id that only resolves against the
+    agent's store on the host that recorded it. ``dir`` is relative to the
+    workspace root (``.`` == root; a worktree or nested-brunch subdir otherwise).
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    handle: str = Field(description="Stable brunch-local id (UUID) or user label used to resume.")
+    agent: AgentKind = Field(description="Which agent CLI owns the conversation.")
+    session: str = Field(description="Native session id passed to the agent to resume.")
+    dir: str = Field(default=".", description="Workspace-root-relative launch dir.")
+    label: str | None = Field(default=None, description="Optional human-friendly name.")
+    parent: str | None = Field(default=None, description="Handle this was forked from, if known.")
+    created: str | None = Field(default=None, description="ISO 8601 registration timestamp.")
+
+
 class WorkspaceManifest(BaseModel):
     """In-memory shape of a brunch.toml."""
 
@@ -57,6 +79,7 @@ class WorkspaceManifest(BaseModel):
     name: str
     description: str | None = None
     repos: list[RepoEntry] = Field(default_factory=list, alias="repo")
+    agents: list[AgentEntry] = Field(default_factory=list, alias="agent")
 
 
 class SetManifest(BaseModel):
@@ -568,3 +591,92 @@ class RmOutcome(BaseModel):
     @property
     def has_risks(self) -> bool:
         return any(r.is_at_risk for r in self.risks)
+
+
+# --- agents ----------------------------------------------------------------
+
+
+AgentState = Literal["registered", "discovered", "stale"]
+
+
+class DiscoveredSession(BaseModel):
+    """A conversation found by reading an agent's own store, scoped by directory.
+
+    ``dir`` is the absolute launch cwd recorded by the agent; the service layer
+    relativizes it against the workspace root before it reaches a manifest.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    agent: AgentKind
+    session: str
+    dir: Path
+    title: str | None = None
+    last_active: str | None = None  # ISO 8601
+
+
+class AgentConversation(BaseModel):
+    """One row of ``br agent list`` — a registered entry, a discovered session, or both.
+
+    ``registered`` (recorded in ``brunch.toml``) with a matching discovered
+    session → ``state == "registered"``. Recorded but not found in the store →
+    ``"stale"``. Found in the store but not recorded → ``"discovered"``.
+    """
+
+    handle: str | None = None
+    agent: AgentKind
+    session: str
+    dir: str  # workspace-root-relative
+    state: AgentState
+    label: str | None = None
+    title: str | None = None
+    last_active: str | None = None
+    parent: str | None = None
+
+
+class AgentList(BaseModel):
+    """Aggregate of ``br agent list``."""
+
+    workspace_name: str
+    workspace_path: Path
+    conversations: list[AgentConversation] = Field(default_factory=list)
+
+    @property
+    def stale(self) -> list[AgentConversation]:
+        return [c for c in self.conversations if c.state == "stale"]
+
+    @property
+    def unregistered(self) -> list[AgentConversation]:
+        return [c for c in self.conversations if c.state == "discovered"]
+
+
+AgentSyncActionType = Literal["adopted", "stale", "pruned", "ok"]
+
+
+class AgentSyncAction(BaseModel):
+    """One reconciliation outcome from ``br agent sync``."""
+
+    action: AgentSyncActionType
+    agent: AgentKind
+    handle: str
+    session: str
+    dir: str
+    label: str | None = None
+    message: str | None = None
+
+
+class AgentSyncReport(BaseModel):
+    """Aggregate outcome of ``br agent sync``."""
+
+    workspace_name: str
+    workspace_path: Path
+    actions: list[AgentSyncAction] = Field(default_factory=list)
+    pruned: bool = False
+
+    @property
+    def adopted(self) -> list[AgentSyncAction]:
+        return [a for a in self.actions if a.action == "adopted"]
+
+    @property
+    def stale(self) -> list[AgentSyncAction]:
+        return [a for a in self.actions if a.action == "stale"]

@@ -77,3 +77,9 @@ class DuplicateRepoError(BrunchError):
     """A repo entry already exists in the manifest."""
 
     exit_code = 11
+
+
+class AgentError(BrunchError):
+    """An `br agent` operation failed (unknown agent, no such conversation, etc.)."""
+
+    exit_code = 12
