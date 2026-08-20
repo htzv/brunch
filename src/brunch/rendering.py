@@ -7,14 +7,17 @@ in isolation and easy to evolve without churning command modules.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, NamedTuple
 
 from rich.console import Console
+from rich.markup import escape
 from rich.table import Table
 
 from brunch.models import (
     AddOutcome,
     AdoptOutcome,
+    AgentList,
+    AgentSyncReport,
     FetchReport,
     ForeachReport,
     FsckReport,
@@ -629,3 +632,118 @@ def render_init_outcome(outcome: InitOutcome, *, console: Console | None = None)
     if outcome.sync_report is not None:
         console.print()
         render_sync_report(outcome.sync_report, console=console)
+
+
+# --- agents ----------------------------------------------------------------
+
+
+class _StateDisplay(NamedTuple):
+    mark: str
+    style: str
+
+
+# Single source of truth for how each conversation state is shown; if separate
+# mark/style maps are ever needed, derive them from this (e.g. {k: v.mark ...}).
+_AGENT_STATE_DISPLAY: dict[str, _StateDisplay] = {
+    "registered": _StateDisplay("●", "green"),
+    "discovered": _StateDisplay("○", "cyan"),
+    "stale": _StateDisplay("⚠", "yellow"),
+}
+_DEFAULT_STATE_DISPLAY = _StateDisplay("?", "white")
+
+
+def _short_handle(handle: str | None) -> str:
+    if not handle:
+        return "[dim]—[/dim]"
+    # UUID-style handles: show a resumable 8-char prefix; labels shown whole.
+    if len(handle) >= 32 and handle.count("-") >= 4:
+        return handle[:8]
+    return handle
+
+
+def render_agent_list(listing: AgentList, *, console: Console | None = None) -> None:
+    """Render the merged registered/discovered conversation list."""
+
+    console = console or Console()
+    console.print(f"[bold]workspace[/bold]  {listing.workspace_name}")
+    console.print(f"[bold]path[/bold]       {listing.workspace_path}")
+
+    if not listing.conversations:
+        console.print(
+            "\n[dim](no agent conversations — start one with "
+            "`br agent new <claude|opencode>`)[/dim]"
+        )
+        return
+
+    table = Table(show_header=True, header_style="bold", padding=(0, 1))
+    table.add_column("")
+    table.add_column("handle")
+    table.add_column("agent")
+    table.add_column("dir")
+    table.add_column("title / label")
+    table.add_column("last active")
+
+    for c in listing.conversations:
+        disp = _AGENT_STATE_DISPLAY.get(c.state, _DEFAULT_STATE_DISPLAY)
+        mark = f"[{disp.style}]{disp.mark}[/{disp.style}]"
+        raw_name = c.label or c.title
+        if raw_name:
+            name = escape(raw_name)  # store/user text — never trust as markup
+        elif c.state == "stale":
+            name = "[yellow](not in store)[/yellow]"  # controlled markup
+        else:
+            name = ""
+        last = (c.last_active or "")[:16].replace("T", " ")
+        table.add_row(mark, _short_handle(c.handle), c.agent, escape(c.dir), name, last)
+
+    console.print()
+    console.print(table)
+
+    hints: list[str] = []
+    if listing.unregistered:
+        hints.append(
+            f"{len(listing.unregistered)} discovered (○) not yet recorded — "
+            "`br agent sync` to adopt"
+        )
+    if listing.stale:
+        hints.append(
+            f"{len(listing.stale)} stale (⚠) recorded but gone — `br agent sync --prune` to drop"
+        )
+    if hints:
+        console.print()
+        for h in hints:
+            console.print(f"[dim]{h}[/dim]")
+
+
+def render_agent_sync(report: AgentSyncReport, *, console: Console | None = None) -> None:
+    """Render the outcome of ``br agent sync``."""
+
+    console = console or Console()
+    if not report.actions:
+        console.print("[dim]nothing to reconcile — brunch.toml matches the stores.[/dim]")
+        return
+
+    for a in report.actions:
+        loc = f"[dim]{escape(f'[{a.dir}]')}[/dim]"
+        if a.action == "adopted":
+            label = f" {escape(a.label)}" if a.label else ""
+            console.print(
+                f"[green]adopted[/green] {a.agent} {_short_handle(a.handle)} {loc}{label}"
+            )
+        elif a.action == "pruned":
+            console.print(f"[yellow]pruned[/yellow]  {a.agent} {escape(a.session)} {loc}")
+        elif a.action == "stale":
+            console.print(
+                f"[yellow]stale[/yellow]   {a.agent} {escape(a.session)} {loc} — {a.message}"
+            )
+
+    parts: list[str] = []
+    if report.adopted:
+        parts.append(f"{len(report.adopted)} adopted")
+    n_pruned = sum(1 for a in report.actions if a.action == "pruned")
+    if n_pruned:
+        parts.append(f"{n_pruned} pruned")
+    if report.stale:
+        parts.append(f"{len(report.stale)} stale (kept; --prune to drop)")
+    console.print()
+    console.print(f"[bold]{', '.join(parts)}[/bold]" if parts else "[dim]no changes[/dim]")

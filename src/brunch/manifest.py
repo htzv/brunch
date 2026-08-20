@@ -69,6 +69,8 @@ def write_workspace_manifest(path: Path, manifest: WorkspaceManifest) -> None:
         data["description"] = manifest.description
     if manifest.repos:
         data["repo"] = [r.model_dump(exclude_none=True) for r in manifest.repos]
+    if manifest.agents:
+        data["agent"] = [a.model_dump(exclude_none=True) for a in manifest.agents]
     path.write_text(tomli_w.dumps(data), encoding="utf-8")
 
 

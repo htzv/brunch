@@ -10,6 +10,7 @@ from brunch import __version__
 from brunch.commands import (
     add,
     adopt,
+    agent,
     fetch,
     foreach,
     fsck,
@@ -97,6 +98,30 @@ app.command("rm", help="Remove the workspace; archive first if --force.")(_handl
 app.command("fsck", help="Diagnose workspace health; --fix runs safe remediations.")(
     _handle_errors(fsck.fsck)
 )
+
+# `br agent …` — coding-agent conversation registry (Claude Code / OpenCode).
+agent_app = typer.Typer(
+    name="agent",
+    help="Start, list, resume, and reconcile coding-agent conversations for this workspace.",
+    no_args_is_help=True,
+    add_completion=False,
+)
+agent_app.command("new", help="Start a new conversation and record it in brunch.toml.")(
+    _handle_errors(agent.agent_new)
+)
+agent_app.command("list", help="List recorded + discovered conversations.")(
+    _handle_errors(agent.agent_list)
+)
+agent_app.command("resume", help="Resume a conversation (picker if no selector).")(
+    _handle_errors(agent.agent_resume)
+)
+agent_app.command("register", help="Record a conversation started outside `br agent new`.")(
+    _handle_errors(agent.agent_register)
+)
+agent_app.command("sync", help="Reconcile brunch.toml against the agent stores.")(
+    _handle_errors(agent.agent_sync)
+)
+app.add_typer(agent_app)
 
 
 if __name__ == "__main__":
