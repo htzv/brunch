@@ -29,15 +29,33 @@ from brunch.models import (
     AgentEntry,
     AgentKind,
     AgentList,
+    AgentRmOutcome,
     AgentSyncAction,
     AgentSyncReport,
     DiscoveredSession,
     WorkspaceLocation,
 )
 
+#: A session more recently active than this may be running right now; purging it
+#: could pull the transcript out from under a live agent, so we guard on it.
+_ACTIVE_WINDOW_S = 120
+
 
 def _now() -> str:
     return datetime.now(UTC).isoformat(timespec="seconds")
+
+
+def _looks_active(last_active: str | None) -> bool:
+    """True if the session was active within the last ``_ACTIVE_WINDOW_S`` seconds."""
+
+    if not last_active:
+        return False
+    try:
+        t = datetime.fromisoformat(last_active)
+    except ValueError:
+        return False
+    now = datetime.now(t.tzinfo) if t.tzinfo else datetime.now(UTC)
+    return (now - t).total_seconds() < _ACTIVE_WINDOW_S
 
 
 def _reldir(directory: Path, root: Path) -> str:
@@ -399,4 +417,115 @@ def sync(location: WorkspaceLocation, *, prune: bool = False) -> AgentSyncReport
         workspace_path=location.root,
         actions=actions,
         pruned=prune,
+    )
+
+
+# --- rm --------------------------------------------------------------------
+
+
+def remove(
+    location: WorkspaceLocation,
+    selector: str,
+    *,
+    purge: bool = False,
+    force: bool = False,
+    dry_run: bool = False,
+) -> AgentRmOutcome:
+    """Remove a conversation from the registry and, with ``purge``, from the store.
+
+    Safety contract:
+      * refuses an absent or ambiguous selector;
+      * without ``--purge``, only unregisters — and refuses if the target isn't
+        recorded (nothing to do);
+      * ``--purge`` deletes from the store only when the session is actually
+        present there; a stale entry just gets dropped (``store_missing``);
+      * refuses to purge a session that looks active (recent activity) unless
+        ``force``;
+      * ``dry_run`` runs every check but changes nothing.
+    """
+
+    listing = list_conversations(location)
+    if not listing.conversations:
+        raise AgentError(
+            "no agent conversations for this workspace.",
+            hint="Nothing to remove — see `br agent list`.",
+        )
+    conv = match_conversation(listing.conversations, selector)
+    if conv is None:
+        raise AgentError(
+            f"no conversation matches {selector!r} (or the prefix is ambiguous).",
+            hint="Run `br agent list` to see handles.",
+        )
+
+    in_manifest = conv.state in ("registered", "stale")
+    in_store = conv.state in ("registered", "discovered")
+    name = conv.label or conv.title
+
+    if not purge:
+        if not in_manifest:
+            raise AgentError(
+                f"{selector!r} is discovered but not recorded — nothing to unregister.",
+                hint=(
+                    "Use --purge to delete it from the store, or `br agent sync` to adopt it first."
+                ),
+            )
+        if not dry_run:
+            unregister(location, conv.agent, conv.session)
+        return AgentRmOutcome(
+            agent=conv.agent,
+            session=conv.session,
+            dir=conv.dir,
+            handle=conv.handle,
+            label=name,
+            unregistered=not dry_run,
+            dry_run=dry_run,
+        )
+
+    # --- purge path (destructive) ---
+    if in_store and not force and _looks_active(conv.last_active):
+        raise AgentError(
+            f"{conv.agent} session {conv.session} looks active (last activity <2m ago) — "
+            "it may be running right now.",
+            hint="Close that session first, or pass --force to purge it anyway.",
+        )
+    prov = get_provider(conv.agent)
+    if in_store and conv.agent == "opencode" and not prov.available():
+        raise AgentError(
+            "'opencode' is not on PATH — needed to delete an OpenCode session.",
+            hint="Install/adjust PATH, or drop just the registry entry without --purge.",
+        )
+
+    if dry_run:
+        return AgentRmOutcome(
+            agent=conv.agent,
+            session=conv.session,
+            dir=conv.dir,
+            handle=conv.handle,
+            label=name,
+            purge=True,
+            store_missing=not in_store,
+            dry_run=True,
+        )
+
+    purged = False
+    if in_store:
+        try:
+            purged = prov.delete_session(conv.session, location.root / conv.dir)
+        except AgentError:
+            raise
+        except (OSError, ValueError, RuntimeError) as e:
+            raise AgentError(f"failed to delete {conv.agent} session {conv.session}: {e}") from e
+    if in_manifest:
+        unregister(location, conv.agent, conv.session)
+
+    return AgentRmOutcome(
+        agent=conv.agent,
+        session=conv.session,
+        dir=conv.dir,
+        handle=conv.handle,
+        label=name,
+        purge=True,
+        purged=purged,
+        store_missing=not in_store,
+        unregistered=in_manifest,
     )

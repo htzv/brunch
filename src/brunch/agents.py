@@ -21,11 +21,17 @@ import os
 import re
 import shutil
 import sqlite3
+import subprocess
 from abc import ABC, abstractmethod
 from datetime import UTC, datetime
 from pathlib import Path
 
 from brunch.models import AgentKind, DiscoveredSession
+
+#: A native session id we're willing to put in a file path or argv. Real Claude
+#: (UUID) and OpenCode (``ses_…``) ids match this; anything with a slash, ``..``,
+#: whitespace, or shell metacharacters is rejected before any destructive use.
+_SAFE_ID = re.compile(r"^[A-Za-z0-9._-]+$")
 
 
 def _iso(ms_or_epoch: float, *, unit: str = "s") -> str:
@@ -73,6 +79,15 @@ class AgentProvider(ABC):
     @abstractmethod
     def resume_argv(self, session: str) -> list[str]:
         """argv to resume an existing session by native id (caller sets cwd)."""
+
+    @abstractmethod
+    def delete_session(self, session_id: str, directory: Path) -> bool:
+        """Permanently delete a session from the store (DESTRUCTIVE).
+
+        ``directory`` is the session's launch dir (Claude needs it to locate the
+        transcript; OpenCode deletes by id). Return True if something was
+        deleted, False if it was already absent. Raise on failure.
+        """
 
 
 # --- Claude Code -----------------------------------------------------------
@@ -193,6 +208,26 @@ class ClaudeProvider(AgentProvider):
     def resume_argv(self, session: str) -> list[str]:
         return [self.cli, "--resume", session]
 
+    def delete_session(self, session_id: str, directory: Path) -> bool:
+        # Claude has no delete CLI, so we remove the transcript file directly —
+        # heavily guarded, since we're reaching into CC's internal storage.
+        if not _SAFE_ID.match(session_id):
+            raise ValueError(f"unsafe session id: {session_id!r}")
+        projects_root = self._projects_dir.resolve()
+        proj = (self._projects_dir / _claude_slug(directory.resolve())).resolve()
+        target = (proj / f"{session_id}.jsonl").resolve()
+        # The file must sit exactly one level under the projects root, in the
+        # slug dir for this launch directory, and be named "<id>.jsonl" — never
+        # anywhere a crafted id/dir could redirect us.
+        if proj.parent != projects_root or target.parent != proj:
+            raise ValueError(f"refusing to delete outside the projects dir: {target}")
+        if target.name != f"{session_id}.jsonl":
+            raise ValueError(f"unexpected delete target: {target.name}")
+        if not target.exists():
+            return False
+        target.unlink()
+        return True
+
 
 # --- OpenCode --------------------------------------------------------------
 
@@ -273,6 +308,27 @@ class OpenCodeProvider(AgentProvider):
 
     def resume_argv(self, session: str) -> list[str]:
         return [self.cli, "--session", session]
+
+    def delete_session(self, session_id: str, directory: Path) -> bool:
+        # OpenCode has a stable delete CLI — prefer it over touching the DB, so
+        # we don't depend on the (versioned) schema for a destructive write.
+        del directory  # deletion is by id; the launch dir is irrelevant here
+        if not _SAFE_ID.match(session_id):
+            raise ValueError(f"unsafe session id: {session_id!r}")
+        if not self.available():
+            raise RuntimeError(f"{self.cli!r} not on PATH — cannot delete an OpenCode session")
+        proc = subprocess.run(
+            [self.cli, "session", "delete", session_id],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if proc.returncode != 0:
+            detail = (proc.stderr or proc.stdout or "").strip()[:200]
+            raise RuntimeError(
+                f"`opencode session delete` failed (exit {proc.returncode}): {detail}"
+            )
+        return True
 
 
 # --- registry --------------------------------------------------------------
