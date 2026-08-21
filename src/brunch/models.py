@@ -701,3 +701,23 @@ class AgentRmOutcome(BaseModel):
     purged: bool = False
     store_missing: bool = False
     dry_run: bool = False
+
+
+# --- drop (single-repo worktree removal) -----------------------------------
+
+
+DropActionType = Literal["dropped", "would_drop", "refused", "error"]
+
+
+class DropOutcome(BaseModel):
+    """Result of ``br drop`` — removing one repo's worktree from a workspace."""
+
+    workspace_name: str
+    workspace_path: Path
+    repo: str
+    short_name: str
+    worktree_path: Path
+    action: DropActionType
+    risk: RmRisk | None = None
+    message: str | None = None
+    dry_run: bool = False

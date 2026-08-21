@@ -11,6 +11,7 @@ from brunch.commands import (
     add,
     adopt,
     agent,
+    drop,
     fetch,
     foreach,
     fsck,
@@ -110,6 +111,9 @@ app.command("foreach", help="Run a command in each repo of the workspace.")(
     _handle_errors(foreach.foreach)
 )
 app.command("rm", help="Remove the workspace; archive first if --force.")(_handle_errors(rm.rm))
+app.command("drop", help="Remove one repo's worktree from the workspace (safety-checked).")(
+    _handle_errors(drop.drop)
+)
 app.command("fsck", help="Diagnose workspace health; --fix runs safe remediations.")(
     _handle_errors(fsck.fsck)
 )

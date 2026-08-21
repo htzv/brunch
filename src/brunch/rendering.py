@@ -19,6 +19,7 @@ from brunch.models import (
     AgentList,
     AgentRmOutcome,
     AgentSyncReport,
+    DropOutcome,
     FetchReport,
     ForeachReport,
     FsckReport,
@@ -777,3 +778,35 @@ def render_agent_rm(outcome: AgentRmOutcome, *, console: Console | None = None) 
     if outcome.unregistered:
         bits.append("[green]unregistered[/green]")
     console.print(f"{' · '.join(bits) or '[dim]no change[/dim]'}: {who} {loc}")
+
+
+def render_drop_outcome(outcome: DropOutcome, *, console: Console | None = None) -> None:
+    """Render the outcome of ``br drop``."""
+
+    console = console or Console()
+    wt = f"[dim]{escape(str(outcome.worktree_path))}[/dim]"
+
+    if outcome.action == "refused":
+        console.print(f"[red]refused[/red] to drop {outcome.short_name} — {outcome.message}")
+        if outcome.risk is not None:
+            r = outcome.risk
+            bits = []
+            if r.has_uncommitted:
+                bits.append("uncommitted")
+            if r.has_untracked:
+                bits.append("untracked")
+            if r.unpushed_commits:
+                bits.append(f"{r.unpushed_commits} unpushed")
+            if r.no_upstream:
+                bits.append("no upstream")
+            if bits:
+                console.print(f"        [yellow]{', '.join(bits)}[/yellow] in {wt}")
+        console.print("        [dim]re-run with --force to drop anyway[/dim]")
+        return
+
+    if outcome.action == "error":
+        console.print(f"[red]error[/red] dropping {outcome.short_name}: {outcome.message}")
+        return
+
+    verb = "[cyan]would drop[/cyan]" if outcome.action == "would_drop" else "[green]dropped[/green]"
+    console.print(f"{verb} {outcome.short_name} {wt}")
