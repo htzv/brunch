@@ -17,6 +17,7 @@ from brunch.models import (
     AddOutcome,
     AdoptOutcome,
     AgentList,
+    AgentRmOutcome,
     AgentSyncReport,
     FetchReport,
     ForeachReport,
@@ -747,3 +748,32 @@ def render_agent_sync(report: AgentSyncReport, *, console: Console | None = None
         parts.append(f"{len(report.stale)} stale (kept; --prune to drop)")
     console.print()
     console.print(f"[bold]{', '.join(parts)}[/bold]" if parts else "[dim]no changes[/dim]")
+
+
+def render_agent_rm(outcome: AgentRmOutcome, *, console: Console | None = None) -> None:
+    """Render the outcome of ``br agent rm``."""
+
+    console = console or Console()
+    who = f"{outcome.agent} {_short_handle(outcome.handle)}"
+    loc = f"[dim]{escape(f'[{outcome.dir}]')}[/dim]"
+
+    if outcome.dry_run:
+        if outcome.purge:
+            bits = []
+            if not outcome.store_missing:
+                bits.append("delete from store")
+            if outcome.handle is not None:
+                bits.append("drop registry entry")
+            console.print(f"[cyan]would {' + '.join(bits) or 'do nothing'}[/cyan]: {who} {loc}")
+        else:
+            console.print(f"[cyan]would unregister[/cyan]: {who} {loc}")
+        return
+
+    bits = []
+    if outcome.purged:
+        bits.append("[red]purged from store[/red]")
+    elif outcome.purge and outcome.store_missing:
+        bits.append("[yellow]not in store[/yellow]")
+    if outcome.unregistered:
+        bits.append("[green]unregistered[/green]")
+    console.print(f"{' · '.join(bits) or '[dim]no change[/dim]'}: {who} {loc}")

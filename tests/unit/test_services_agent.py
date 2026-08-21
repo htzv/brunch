@@ -7,14 +7,19 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from datetime import UTC, datetime, timedelta
 from io import StringIO
 from pathlib import Path
 
 import pytest
+import typer
 from rich.console import Console
+from typer.testing import CliRunner
 
+from brunch import experimental
 from brunch.agents import ClaudeProvider, OpenCodeProvider, _claude_slug
-from brunch.errors import AgentError
+from brunch.cli import app
+from brunch.errors import AgentError, BrunchError
 from brunch.manifest import load_workspace_manifest, write_workspace_manifest
 from brunch.models import (
     AgentConversation,
@@ -222,15 +227,18 @@ class TestOpenCodeProvider:
 
 
 class _FakeProvider:
-    def __init__(self, kind, discovered=(), ids=(), assigned=False):
+    def __init__(self, kind, discovered=(), ids=(), assigned=False, available=True):
         self.kind = kind
         self.cli = kind
         self.supports_assigned_id = assigned
         self._discovered = list(discovered)
         self._ids = set(ids)
+        self._available = available
+        self.deleted: list[tuple[str, Path]] = []
+        self.delete_result = True
 
     def available(self):
-        return True
+        return self._available
 
     def discover_under(self, root):
         return list(self._discovered)
@@ -243,6 +251,10 @@ class _FakeProvider:
 
     def resume_argv(self, session):
         return [self.cli, "--session", session]
+
+    def delete_session(self, session_id, directory):
+        self.deleted.append((session_id, directory))
+        return self.delete_result
 
 
 class TestListMerge:
@@ -452,3 +464,233 @@ class TestRenderMarkupSafety:
         out = buf.getvalue()
         assert "/p/q" in out
         assert "weird" in out
+
+
+# --- experimental gate -----------------------------------------------------
+
+
+class TestExperimentalGate:
+    @pytest.fixture(autouse=True)
+    def _reset(self, monkeypatch):
+        monkeypatch.delenv(experimental.ENV_VAR, raising=False)
+        experimental.set_enabled(None)
+        yield
+        experimental.set_enabled(None)
+
+    def test_enable_and_query(self):
+        experimental.set_enabled("agent-rm")
+        assert experimental.is_enabled("agent-rm")
+        experimental.set_enabled(None)
+        assert not experimental.is_enabled("agent-rm")
+
+    def test_dedup_and_whitespace(self):
+        experimental.set_enabled(" agent-rm , agent-rm ")
+        assert experimental.is_enabled("agent-rm")
+
+    def test_unknown_feature_rejected(self):
+        with pytest.raises(BrunchError, match="unknown experimental"):
+            experimental.set_enabled("bogus")
+
+    def test_env_var(self, monkeypatch):
+        monkeypatch.setenv(experimental.ENV_VAR, "agent-rm")
+        experimental.set_enabled(None)
+        assert experimental.is_enabled("agent-rm")
+
+    def test_require_enabled_is_noop(self):
+        experimental.set_enabled("agent-rm")
+        experimental.require("agent-rm")  # must not raise
+
+    def test_require_disabled_exits_loudly(self, capsys):
+        with pytest.raises(typer.Exit) as exc:
+            experimental.require("agent-rm")
+        assert exc.value.exit_code == 2
+        err = capsys.readouterr().err
+        assert "EXPERIMENTAL" in err
+        assert "agent-rm" in err
+        assert "--enable-experimental" in err
+
+
+# --- provider deletion -----------------------------------------------------
+
+
+class TestProviderDelete:
+    def test_claude_delete_removes_file_and_is_idempotent(self, tmp_path: Path) -> None:
+        root = tmp_path / "task"
+        root.mkdir()
+        projects = tmp_path / "claude" / "projects"
+        sid = "abcd1234-abcd-1234-abcd-1234abcd1234"
+        f = _write_claude_session(projects, root, sid)
+        p = ClaudeProvider(projects_dir=projects)
+        assert f.exists()
+        assert p.delete_session(sid, root) is True
+        assert not f.exists()
+        assert p.delete_session(sid, root) is False  # already gone
+
+    def test_claude_delete_rejects_unsafe_id(self, tmp_path: Path) -> None:
+        # Ids with a path separator, whitespace, or empty are rejected by the id
+        # guard; pure-dot ids like ".." stay a filename component and are caught
+        # by the path-safety check instead (covered separately).
+        p = ClaudeProvider(projects_dir=tmp_path / "projects")
+        for bad in ["../evil", "a/b", "x y", "", "a b/c"]:
+            with pytest.raises(ValueError):
+                p.delete_session(bad, tmp_path)
+
+    def test_opencode_delete_shells_out(self, tmp_path: Path, monkeypatch) -> None:
+        import subprocess as sp
+
+        seen = {}
+
+        def fake_run(argv, **kw):
+            seen["argv"] = argv
+            return sp.CompletedProcess(argv, 0, "", "")
+
+        monkeypatch.setattr("brunch.agents.shutil.which", lambda c: "/usr/bin/" + c)
+        monkeypatch.setattr("brunch.agents.subprocess.run", fake_run)
+        p = OpenCodeProvider(db_path=tmp_path / "x.db")
+        assert p.delete_session("ses_abc", tmp_path) is True
+        assert seen["argv"] == ["opencode", "session", "delete", "ses_abc"]
+
+    def test_opencode_delete_raises_on_failure(self, tmp_path: Path, monkeypatch) -> None:
+        import subprocess as sp
+
+        monkeypatch.setattr("brunch.agents.shutil.which", lambda c: "/usr/bin/" + c)
+        monkeypatch.setattr(
+            "brunch.agents.subprocess.run",
+            lambda argv, **kw: sp.CompletedProcess(argv, 1, "", "boom"),
+        )
+        p = OpenCodeProvider(db_path=tmp_path / "x.db")
+        with pytest.raises(RuntimeError, match="failed"):
+            p.delete_session("ses_abc", tmp_path)
+
+    def test_opencode_delete_requires_cli(self, tmp_path: Path, monkeypatch) -> None:
+        monkeypatch.setattr("brunch.agents.shutil.which", lambda c: None)
+        p = OpenCodeProvider(db_path=tmp_path / "x.db")
+        with pytest.raises(RuntimeError, match="PATH"):
+            p.delete_session("ses_abc", tmp_path)
+
+
+# --- service: remove -------------------------------------------------------
+
+
+def _disc(session: str, ws: Path, *, active: bool = False) -> DiscoveredSession:
+    when = datetime.now(UTC) if active else datetime.now(UTC) - timedelta(days=1)
+    return DiscoveredSession(
+        agent="opencode", session=session, dir=ws, last_active=when.isoformat()
+    )
+
+
+class TestRemove:
+    def _providers(self, monkeypatch, fake) -> None:
+        monkeypatch.setattr(svc, "all_providers", lambda: [fake])
+        monkeypatch.setattr(svc, "get_provider", lambda kind: fake)
+
+    def test_unregister_registered(self, make_workspace, monkeypatch) -> None:
+        ws = make_workspace()
+        loc = _location(ws)
+        svc.register(loc, "opencode", "s1", handle="h1", directory=ws)
+        self._providers(monkeypatch, _FakeProvider("opencode", discovered=[_disc("s1", ws)]))
+        out = svc.remove(loc, "h1")
+        assert out.unregistered and not out.purged
+        assert load_workspace_manifest(loc.manifest_path).agents == []
+
+    def test_discovered_only_without_purge_errors(self, make_workspace, monkeypatch) -> None:
+        ws = make_workspace()
+        loc = _location(ws)
+        self._providers(monkeypatch, _FakeProvider("opencode", discovered=[_disc("s2", ws)]))
+        with pytest.raises(AgentError, match="not recorded"):
+            svc.remove(loc, "s2")
+
+    def test_absent_selector_errors(self, make_workspace, monkeypatch) -> None:
+        ws = make_workspace()
+        loc = _location(ws)
+        self._providers(monkeypatch, _FakeProvider("opencode", discovered=[_disc("s1", ws)]))
+        with pytest.raises(AgentError, match="no conversation matches"):
+            svc.remove(loc, "zzz")
+
+    def test_purge_registered_present(self, make_workspace, monkeypatch) -> None:
+        ws = make_workspace()
+        loc = _location(ws)
+        svc.register(loc, "opencode", "s1", handle="h1", directory=ws)
+        fake = _FakeProvider("opencode", discovered=[_disc("s1", ws)])
+        self._providers(monkeypatch, fake)
+        out = svc.remove(loc, "h1", purge=True)
+        assert out.purged and out.unregistered and not out.store_missing
+        assert [c[0] for c in fake.deleted] == ["s1"]
+        assert load_workspace_manifest(loc.manifest_path).agents == []
+
+    def test_purge_stale_skips_store(self, make_workspace, monkeypatch) -> None:
+        ws = make_workspace()
+        loc = _location(ws)
+        svc.register(loc, "opencode", "s_gone", handle="h1", directory=ws)
+        self._providers(monkeypatch, (fake := _FakeProvider("opencode", discovered=[])))
+        out = svc.remove(loc, "h1", purge=True)
+        assert out.store_missing and out.unregistered and not out.purged
+        assert fake.deleted == []
+        assert load_workspace_manifest(loc.manifest_path).agents == []
+
+    def test_purge_discovered_only(self, make_workspace, monkeypatch) -> None:
+        ws = make_workspace()
+        loc = _location(ws)
+        fake = _FakeProvider("opencode", discovered=[_disc("s2", ws)])
+        self._providers(monkeypatch, fake)
+        out = svc.remove(loc, "s2", purge=True)
+        assert out.purged and not out.unregistered
+        assert [c[0] for c in fake.deleted] == ["s2"]
+
+    def test_purge_active_guard(self, make_workspace, monkeypatch) -> None:
+        ws = make_workspace()
+        loc = _location(ws)
+        svc.register(loc, "opencode", "s1", handle="h1", directory=ws)
+        fake = _FakeProvider("opencode", discovered=[_disc("s1", ws, active=True)])
+        self._providers(monkeypatch, fake)
+        with pytest.raises(AgentError, match="looks active"):
+            svc.remove(loc, "h1", purge=True)
+        assert fake.deleted == []
+        # --force overrides the guard
+        out = svc.remove(loc, "h1", purge=True, force=True)
+        assert out.purged
+
+    def test_purge_opencode_cli_unavailable(self, make_workspace, monkeypatch) -> None:
+        ws = make_workspace()
+        loc = _location(ws)
+        svc.register(loc, "opencode", "s1", handle="h1", directory=ws)
+        fake = _FakeProvider("opencode", discovered=[_disc("s1", ws)], available=False)
+        self._providers(monkeypatch, fake)
+        with pytest.raises(AgentError, match="not on PATH"):
+            svc.remove(loc, "h1", purge=True)
+
+    def test_dry_run_changes_nothing(self, make_workspace, monkeypatch) -> None:
+        ws = make_workspace()
+        loc = _location(ws)
+        svc.register(loc, "opencode", "s1", handle="h1", directory=ws)
+        fake = _FakeProvider("opencode", discovered=[_disc("s1", ws)])
+        self._providers(monkeypatch, fake)
+        out = svc.remove(loc, "h1", purge=True, dry_run=True)
+        assert out.dry_run and not out.purged
+        assert fake.deleted == []
+        assert len(load_workspace_manifest(loc.manifest_path).agents) == 1
+
+
+# --- CLI: experimental gate on `br agent rm` -------------------------------
+
+
+class TestAgentRmCli:
+    @pytest.fixture(autouse=True)
+    def _reset(self, monkeypatch):
+        monkeypatch.delenv(experimental.ENV_VAR, raising=False)
+        experimental.set_enabled(None)
+        yield
+        experimental.set_enabled(None)
+
+    def test_gate_blocks_without_optin(self, tmp_path: Path, monkeypatch) -> None:
+        monkeypatch.chdir(tmp_path)
+        result = CliRunner().invoke(app, ["agent", "rm", "whatever"])
+        assert result.exit_code == 2  # refused by the experimental gate
+
+    def test_gate_opens_with_optin(self, tmp_path: Path, monkeypatch) -> None:
+        monkeypatch.chdir(tmp_path)  # no brunch.toml here
+        result = CliRunner().invoke(
+            app, ["--enable-experimental=agent-rm", "agent", "rm", "whatever"]
+        )
+        # Gate passed; the command then fails to find a workspace (exit 3), not 2.
+        assert result.exit_code != 2

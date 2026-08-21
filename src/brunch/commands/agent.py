@@ -20,10 +20,11 @@ import typer
 from rich.console import Console
 from rich.markup import escape
 
+from brunch import experimental
 from brunch.errors import AgentError
 from brunch.models import AgentConversation, AgentKind
 from brunch.paths import discover_workspace
-from brunch.rendering import render_agent_list, render_agent_sync
+from brunch.rendering import render_agent_list, render_agent_rm, render_agent_sync
 from brunch.services import agent as svc
 
 _KINDS = get_args(AgentKind)  # ("claude", "opencode")
@@ -230,3 +231,45 @@ def agent_sync(
         typer.echo(report.model_dump_json(indent=2))
     else:
         render_agent_sync(report)
+
+
+def agent_rm(
+    selector: str = typer.Argument(..., help="Handle, label, or session-id (prefix ok)."),
+    purge: bool = typer.Option(
+        False,
+        "--purge",
+        help="Also DELETE the underlying session from the agent's store (destructive).",
+    ),
+    force: bool = typer.Option(
+        False, "--force", "-f", help="Skip the 'looks active' guard when purging."
+    ),
+    yes: bool = typer.Option(False, "--yes", "-y", help="Skip the purge confirmation prompt."),
+    dry_run: bool = typer.Option(
+        False, "--dry-run", help="Show what would happen; change nothing."
+    ),
+    workspace: Path | None = typer.Option(
+        None, "-w", "--workspace", help="Operate on the workspace at this path (default: cwd)."
+    ),
+) -> None:
+    """Remove a conversation from the registry (and, with --purge, delete it)."""
+
+    experimental.require("agent-rm")
+    location = discover_workspace(workspace or Path.cwd())
+    console = Console()
+
+    # Confirm before an irreversible store deletion (preview via dry-run first,
+    # which also runs the safety checks — so we refuse *before* prompting).
+    if purge and not dry_run and not yes:
+        preview = svc.remove(location, selector, purge=True, force=force, dry_run=True)
+        if not preview.store_missing:
+            target = escape(f"[{location.root / preview.dir}]")
+            console.print(
+                f"[red bold]Permanently delete[/red bold] the {preview.agent} session "
+                f"{preview.session} from its store [dim]{target}[/dim]. "
+                "[red]This cannot be undone.[/red]"
+            )
+            if not typer.confirm("Proceed?"):
+                raise typer.Abort()
+
+    outcome = svc.remove(location, selector, purge=purge, force=force, dry_run=dry_run)
+    render_agent_rm(outcome)

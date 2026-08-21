@@ -680,3 +680,24 @@ class AgentSyncReport(BaseModel):
     @property
     def stale(self) -> list[AgentSyncAction]:
         return [a for a in self.actions if a.action == "stale"]
+
+
+class AgentRmOutcome(BaseModel):
+    """Result of ``br agent rm``.
+
+    ``unregistered`` — the ``[[agent]]`` entry was dropped from brunch.toml.
+    ``purged`` — the underlying session was deleted from the agent's store.
+    ``store_missing`` — ``--purge`` was requested but the store had nothing to
+    delete (a stale entry). ``dry_run`` — nothing was changed.
+    """
+
+    agent: AgentKind
+    session: str
+    dir: str
+    handle: str | None = None
+    label: str | None = None
+    purge: bool = False  # whether --purge was requested (shapes dry-run wording)
+    unregistered: bool = False
+    purged: bool = False
+    store_missing: bool = False
+    dry_run: bool = False

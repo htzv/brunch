@@ -6,7 +6,7 @@ from typing import Any
 
 import typer
 
-from brunch import __version__
+from brunch import __version__, experimental
 from brunch.commands import (
     add,
     adopt,
@@ -67,8 +67,23 @@ def main(
         is_eager=True,
         help="Show brunch version and exit.",
     ),
+    enable_experimental: str | None = typer.Option(
+        None,
+        "--enable-experimental",
+        metavar="FEATURE[,FEATURE…]",
+        help=(
+            "Opt into experimental, possibly-dangerous features (e.g. 'agent-rm'). Comma-separated."
+        ),
+    ),
 ) -> None:
     """Mise en place for git worktree-based multi-repo task workspaces."""
+    try:
+        experimental.set_enabled(enable_experimental)
+    except BrunchError as e:
+        typer.secho(f"error: {e.message}", err=True, fg=typer.colors.RED)
+        if e.hint:
+            typer.secho(f"hint: {e.hint}", err=True, fg=typer.colors.BLUE)
+        raise typer.Exit(code=e.exit_code) from e
 
 
 # Register subcommands. Each module exposes a single function named after the
@@ -121,6 +136,10 @@ agent_app.command("register", help="Record a conversation started outside `br ag
 agent_app.command("sync", help="Reconcile brunch.toml against the agent stores.")(
     _handle_errors(agent.agent_sync)
 )
+agent_app.command(
+    "rm",
+    help="Remove a conversation from the registry; --purge also deletes it (experimental).",
+)(_handle_errors(agent.agent_rm))
 app.add_typer(agent_app)
 
 
