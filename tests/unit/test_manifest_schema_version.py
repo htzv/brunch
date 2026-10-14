@@ -8,7 +8,6 @@ import pytest
 
 from brunch.errors import ManifestError
 from brunch.manifest import (
-    UPDATE_DOCS_URL,
     load_set_manifest,
     load_workspace_manifest,
     write_set_manifest,
@@ -16,6 +15,7 @@ from brunch.manifest import (
 )
 from brunch.models import SetManifest, WorkspaceManifest
 from brunch.schema import CURRENT_SCHEMA_VERSION, OLDEST_SCHEMA_VERSION, SCHEMA_VERSION_KEY
+from brunch.website import UPDATE_DOCS_URL
 
 WORKSPACE_FILE_WITHOUT_VERSION = 'name = "demo"\n'
 SET_FILE_WITHOUT_VERSION = 'name = "demo-set"\n'

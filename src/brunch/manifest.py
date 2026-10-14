@@ -16,8 +16,7 @@ from pydantic import ValidationError
 from brunch.errors import ManifestError
 from brunch.models import SetManifest, WorkspaceManifest
 from brunch.schema import CURRENT_SCHEMA_VERSION, SCHEMA_VERSION_KEY
-
-UPDATE_DOCS_URL = "https://htzv.github.io/brunch/update/"
+from brunch.website import UPDATE_DOCS_URL
 
 
 def _load_toml(path: Path) -> dict[str, object]:
