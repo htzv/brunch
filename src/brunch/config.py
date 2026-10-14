@@ -14,6 +14,7 @@ from pydantic import ValidationError
 
 from brunch.errors import ConfigError
 from brunch.models import ToolConfig
+from brunch.website import TOOL_CONFIG_DOCS_URL
 
 CONFIG_FILENAME = "config.toml"
 
@@ -61,5 +62,5 @@ def load_config(path: Path | None = None) -> ToolConfig:
     except ValidationError as e:
         raise ConfigError(
             f"invalid configuration in {target}: {e}",
-            hint="See `brunch --help` and docs/initial-design.md §4.3 for valid keys.",
+            hint=f"See {TOOL_CONFIG_DOCS_URL}",
         ) from e

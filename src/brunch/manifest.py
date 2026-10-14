@@ -16,7 +16,7 @@ from pydantic import ValidationError
 from brunch.errors import ManifestError
 from brunch.models import SetManifest, WorkspaceManifest
 from brunch.schema import CURRENT_SCHEMA_VERSION, SCHEMA_VERSION_KEY
-from brunch.website import UPDATE_DOCS_URL
+from brunch.website import SET_MANIFEST_DOCS_URL, UPDATE_DOCS_URL, WORKSPACE_MANIFEST_DOCS_URL
 
 
 def _load_toml(path: Path) -> dict[str, object]:
@@ -69,7 +69,7 @@ def load_workspace_manifest(path: Path) -> WorkspaceManifest:
     except ValidationError as e:
         raise ManifestError(
             f"invalid workspace manifest at {path}:\n{_describe(e)}",
-            hint="See docs/initial-design.md §4.1 for the schema.",
+            hint=f"See {WORKSPACE_MANIFEST_DOCS_URL}",
         ) from e
 
 
@@ -83,7 +83,7 @@ def load_set_manifest(path: Path) -> SetManifest:
     except ValidationError as e:
         raise ManifestError(
             f"invalid set manifest at {path}:\n{_describe(e)}",
-            hint="See docs/initial-design.md §4.2 for the schema.",
+            hint=f"See {SET_MANIFEST_DOCS_URL}",
         ) from e
 
 
