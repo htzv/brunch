@@ -111,12 +111,14 @@ tired colleague who has never used brunch can follow it.
   `frontend`.
 - **Check every claim against the code or by running the command.** The rule
   "verify, never assume" applies to docs too.
+- **Quoted text is exempt.** An excerpt set as a quote, such as the author's own
+  description of brunch in the README, keeps its original wording. These rules do
+  not apply inside it.
 
 Examples taken from the current docs:
 
 | Before | After |
 |---|---|
-| A worktree-aware spiritual successor to myrepos (`mr`), shaped around an agentic-coding workflow. | Like myrepos (`mr`), brunch runs git operations across several repos at once. It uses git worktrees, so each task gets its own working copy of every repo it touches. |
 | This is the moment the workspace earns its keep. Because both repos sit under a single directory, an agent that can read the filesystem has the full cross-repo picture in one shot. | Both repos sit under one directory, so an agent that can read files sees both without you copying context between them. |
 | Brunch sits on top of `git worktree` as a cooperative semantic layer. It never replaces git's own state, just orchestrates around it. | Brunch runs `git worktree` for you. It keeps no record of its own about which worktrees exist. It reads that from git and from `brunch.toml`. |
 | Both `brunch` and the short alias `br` are first-class. | `brunch` and `br` are the same command. |
