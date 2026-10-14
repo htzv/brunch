@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Run pre-commit at the version brunch pins. It is not a project dependency:
+# pre-commit pulls in pyyaml, which has no Python 3.15 wheel yet.
+exec uvx pre-commit@4.7.0 "$@"

@@ -43,29 +43,32 @@ been pushed, so the rules below are about not guessing.
   (use another worktree's, or the home-wide `br`), and plain git operations.
 - **One task, one br workspace.** Each task gets its own workspace holding one
   worktree of this repo. Keep each pull request small and self-contained.
-- **Checks before a PR:**
+- **Checks before a PR.** The checks are defined once, in `.pre-commit-config.yaml`,
+  and CI runs the same hooks. Run them from the worktree:
 
   ```bash
-  uv run ruff check . && uv run ruff format --check . && uv run mypy src
-  uv run pytest --cov=brunch      # CI fails below 85% coverage
-  uv run mkdocs build --strict    # when docs changed
+  scripts/pre-commit run --all-files                      # ruff, format, mypy, tests
+  scripts/pre-commit run --all-files --hook-stage manual  # tests on every Python
+                                                          # version, and mkdocs --strict
   ```
 
-- **Test on every supported Python version.** The versions are the matrix in
-  `.github/workflows/ci.yml`. The Python in your own venv is not necessarily one
-  CI uses, so run the suite on each version in the matrix:
-
-  ```bash
-  uv run --python <version> --extra dev pytest -q --cov=brunch
-  ```
-
-  This replaces the venv in your worktree, and a plain `uv sync` keeps the Python
-  that ran last. To pick one, run `uv sync --extra dev --python <version>`.
-- **Tests must not depend on the terminal or on CI environment variables.** Typer
-  forces coloured output when `GITHUB_ACTIONS` is set, which once broke a test that
-  passed locally. Run the suite once with `GITHUB_ACTIONS=true uv run pytest`, and
-  test text at its source (a docstring, a model) rather than parsing rendered
-  output.
+  The first command is the minimum before pushing. Run the second when you changed
+  code that could behave differently across Python versions, and the docs build
+  when you changed docs. `scripts/pre-commit` runs a pinned pre-commit through
+  `uvx`; installing the hooks as git hooks is optional
+  (`scripts/pre-commit install`).
+- **Do not run the checks by hand with different flags.** The `pytest` hook runs
+  `scripts/run-tests.sh`: coverage gate (85%, CI fails below it) and
+  `GITHUB_ACTIONS=true`. Typer forces coloured output when `GITHUB_ACTIONS` is set,
+  which once broke a test that passed locally, so the hook sets it. Test text at its
+  source (a docstring, a model) rather than parsing rendered output.
+- **Supported Python versions** are listed in `scripts/python-versions.txt`, which
+  CI reads and a test checks against the classifiers in `pyproject.toml`. When you
+  add a version, change it there. `scripts/run-tests.sh <version>` uses a separate
+  venv per version (`.venv-<version>`), so it never rebuilds `.venv`.
+- **Changing the checks:** edit `.pre-commit-config.yaml` or the scripts it calls,
+  never a command in a workflow file alone. pre-commit is not a project dependency
+  because pyyaml has no Python 3.15 wheel yet.
 
 - **Tests use real git** in temporary directories. Do not mock git.
 
