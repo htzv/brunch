@@ -147,7 +147,7 @@ Exit codes:
 |---|---|
 | 0 | Success |
 | 1 | Refused or failed (for example, `rm` or `drop` found work at risk) |
-| 2 | An experimental feature was used without opting in |
+| 2 | Usage error, or an experimental feature used without opting in |
 | 3 | No workspace found |
 | 4 | Invalid `brunch.toml` |
 | 5 | Invalid tool config |
