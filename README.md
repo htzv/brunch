@@ -1,23 +1,40 @@
 # brunch
 
+> Mise en place for git worktree-based multi-repo task workspaces.
+>
+> — the author, as originally described
+
 Brunch gives each task its own directory, with one git worktree for every repo the
-task touches. The worktrees share one branch name, sit side by side, and can be
-checked, fetched and rebased together with one command. It is for people, and
-coding agents, who often change several repos for one piece of work.
+task touches. By default the worktrees share one branch name, sit side by side, and
+can be checked, fetched and rebased together with one command. It is for people,
+and coding agents, who often change several repos for one piece of work.
+
+As described at inception:
+
+> A small CLI for setting up, synchronising, and tearing down **task workspaces** — directories of co-located git worktrees, one per repo, operated on as a unit.
+> A worktree-aware spiritual successor to [myrepos (`mr`)](https://myrepos.branchable.com/), shaped around an agentic-coding workflow.
 
 ## Quick start
 
 ```bash
-br init add-export                       # new workspace: ./add-export
-cd add-export
-br add example/backend                   # worktree ./backend on branch add-export
-br add github.com/example/frontend       # worktree ./frontend on branch add-export
+br init PROJECT-1234_add-export          # new workspace: ./PROJECT-1234_add-export
+cd PROJECT-1234_add-export
+br add example/backend                   # worktree ./backend, branch PROJECT-1234_add-export
+br add github.com/example/frontend       # worktree ./frontend, same branch
 br status                                # one table for all repos
 br rm                                    # remove the workspace when you are done
 ```
 
+The workspace name is also the default branch name. Naming it after a task id, as
+above, makes the branches easy to trace back to the task.
+
 `br` and `brunch` are the same command. `br --help` and `br <command> --help` list
 every command and flag.
+
+**Branches.** The same branch in every repo is what brunch expects, not something it
+enforces. You can rename or switch the branch in one worktree. Brunch does not
+stop you, but `br status`, `br sync` and `br fsck` then warn that the worktree's
+branch differs from the one in `brunch.toml`. They do not change anything.
 
 Brunch never clones. The repos must already be cloned at
 `<root>/<forge>/<org>/<repo>`. The default root is `~/repos/brunch` and the default
