@@ -55,6 +55,14 @@ class GitError(BrunchError):
     exit_code = 7
 
 
+class FetchError(GitError):
+    """``git fetch`` from a remote failed."""
+
+
+class RemoteError(GitError):
+    """No single remote could be chosen, or the one asked for does not exist."""
+
+
 class TemplateError(BrunchError):
     """A template file is missing, malformed, or otherwise unusable."""
 

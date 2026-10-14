@@ -126,3 +126,59 @@ def worktree_factory() -> Callable[..., None]:
 def _no_global_git_config(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setenv("GIT_CONFIG_GLOBAL", str(tmp_path / "git-config-global"))
     monkeypatch.setenv("GIT_CONFIG_SYSTEM", os.devnull)
+
+
+class OriginRepo:
+    """A bare "origin" plus a canonical clone of it, as brunch's users have.
+
+    ``canonical`` is a normal clone with ``origin`` configured and ``main``
+    pushed. ``advance`` adds a commit to origin's branch from a second clone,
+    so ``canonical`` falls behind without knowing it until it fetches.
+    """
+
+    def __init__(self, root: Path, name: str) -> None:
+        self.bare = root / f"{name}.git"
+        self.canonical = root / name
+        self._pusher = root / f"{name}-pusher"
+        self._advances = 0
+        _git(["init", "--bare", "-b", "main", str(self.bare)])
+        _git(["clone", str(self.bare), str(self._pusher)])
+        (self._pusher / "README.md").write_text(f"# {name}\n", encoding="utf-8")
+        _git(["add", "."], cwd=self._pusher)
+        _git(["commit", "-m", "initial commit"], cwd=self._pusher)
+        _git(["push", "origin", "HEAD:main"], cwd=self._pusher)
+        _git(["clone", str(self.bare), str(self.canonical)])
+
+    def advance(self, branch: str = "main") -> str:
+        """Push one new commit to ``branch`` on origin; return its sha."""
+
+        _git(["fetch", "origin"], cwd=self._pusher)
+        _git(["checkout", "-B", branch, f"origin/{branch}"], cwd=self._pusher)
+        self._advances += 1
+        marker = self._pusher / f"change-{self._advances}.txt"
+        marker.write_text("change\n", encoding="utf-8")
+        _git(["add", "."], cwd=self._pusher)
+        _git(["commit", "-m", f"advance {branch}"], cwd=self._pusher)
+        _git(["push", "origin", f"HEAD:{branch}"], cwd=self._pusher)
+        return _git(["rev-parse", "HEAD"], cwd=self._pusher).strip()
+
+    def publish_branch(self, branch: str, *, from_ref: str = "main") -> None:
+        """Create ``branch`` on origin at ``from_ref``."""
+
+        _git(["fetch", "origin"], cwd=self._pusher)
+        _git(["push", "origin", f"origin/{from_ref}:refs/heads/{branch}"], cwd=self._pusher)
+
+
+@pytest.fixture
+def make_origin(tmp_path: Path) -> Callable[..., OriginRepo]:
+    """Factory: an :class:`OriginRepo` under a fresh directory."""
+
+    counter = {"n": 0}
+
+    def _make(name: str | None = None) -> OriginRepo:
+        counter["n"] += 1
+        root = tmp_path / "origins"
+        root.mkdir(exist_ok=True)
+        return OriginRepo(root, name or f"origin-repo-{counter['n']}")
+
+    return _make

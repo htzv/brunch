@@ -14,7 +14,7 @@ from brunch.errors import GitError
 from brunch.models import GitStatus, WorktreeRef
 
 
-def _run(
+def run_git(
     args: list[str], *, cwd: Path | None = None, check: bool = True
 ) -> subprocess.CompletedProcess[str]:
     """Run a git command and return the CompletedProcess.
@@ -50,7 +50,7 @@ def is_git_repo(path: Path) -> bool:
 
     if not path.exists():
         return False
-    result = _run(["rev-parse", "--git-dir"], cwd=path, check=False)
+    result = run_git(["rev-parse", "--git-dir"], cwd=path, check=False)
     return result.returncode == 0
 
 
@@ -63,7 +63,7 @@ def current_branch(path: Path) -> str | None:
 def get_status(path: Path) -> GitStatus:
     """Parse ``git status --porcelain=v2 --branch`` into a ``GitStatus``."""
 
-    result = _run(["status", "--porcelain=v2", "--branch"], cwd=path)
+    result = run_git(["status", "--porcelain=v2", "--branch"], cwd=path)
     return _parse_porcelain_v2(result.stdout)
 
 
@@ -96,14 +96,14 @@ def _parse_porcelain_v2(text: str) -> GitStatus:
 def worktree_list(canonical: Path) -> list[WorktreeRef]:
     """Parse ``git worktree list --porcelain`` against a canonical clone."""
 
-    result = _run(["worktree", "list", "--porcelain"], cwd=canonical)
+    result = run_git(["worktree", "list", "--porcelain"], cwd=canonical)
     return _parse_worktree_list(result.stdout)
 
 
 def branch_exists(canonical: Path, branch: str) -> bool:
     """True if a local branch named ``branch`` exists in ``canonical``."""
 
-    result = _run(
+    result = run_git(
         ["show-ref", "--verify", "--quiet", f"refs/heads/{branch}"],
         cwd=canonical,
         check=False,
@@ -121,9 +121,9 @@ def add_worktree(canonical: Path, target: Path, *, branch: str, base: str = "mai
 
     target.parent.mkdir(parents=True, exist_ok=True)
     if branch_exists(canonical, branch):
-        _run(["worktree", "add", str(target), branch], cwd=canonical)
+        run_git(["worktree", "add", str(target), branch], cwd=canonical)
     else:
-        _run(["worktree", "add", "-b", branch, str(target), base], cwd=canonical)
+        run_git(["worktree", "add", "-b", branch, str(target), base], cwd=canonical)
 
 
 def remove_worktree(canonical: Path, target: Path, *, force: bool = False) -> None:
@@ -137,20 +137,20 @@ def remove_worktree(canonical: Path, target: Path, *, force: bool = False) -> No
     if force:
         args.append("--force")
     args.append(str(target))
-    _run(args, cwd=canonical)
+    run_git(args, cwd=canonical)
 
 
 def rev_parse_verify(path: Path, ref: str) -> bool:
     """True if ``ref`` resolves to a commit in the repo at ``path``."""
 
-    result = _run(["rev-parse", "--verify", "--quiet", ref], cwd=path, check=False)
+    result = run_git(["rev-parse", "--verify", "--quiet", ref], cwd=path, check=False)
     return result.returncode == 0
 
 
 def has_remote(path: Path) -> bool:
     """True if the repo at ``path`` has any remote configured."""
 
-    result = _run(["remote"], cwd=path, check=False)
+    result = run_git(["remote"], cwd=path, check=False)
     if result.returncode != 0:
         return False
     return bool(result.stdout.strip())
@@ -163,13 +163,13 @@ def fetch(path: Path) -> None:
     "no remote configured" if it wants to degrade gracefully.
     """
 
-    _run(["fetch"], cwd=path)
+    run_git(["fetch"], cwd=path)
 
 
 def pull(path: Path) -> None:
     """Run ``git pull`` (default remote, default merge strategy)."""
 
-    _run(["pull"], cwd=path)
+    run_git(["pull"], cwd=path)
 
 
 def rebase(
@@ -193,7 +193,7 @@ def rebase(
         args.extend(["--onto", target, upstream])
     else:
         args.append(target)
-    _run(args, cwd=path)
+    run_git(args, cwd=path)
 
 
 def count_commits_ahead_of(path: Path, base: str) -> int:
@@ -204,7 +204,7 @@ def count_commits_ahead_of(path: Path, base: str) -> int:
     unknown" should check ``rev_parse_verify`` first.
     """
 
-    result = _run(["rev-list", "--count", "HEAD", f"^{base}"], cwd=path, check=False)
+    result = run_git(["rev-list", "--count", "HEAD", f"^{base}"], cwd=path, check=False)
     if result.returncode != 0:
         return 0
     try:
@@ -216,13 +216,13 @@ def count_commits_ahead_of(path: Path, base: str) -> int:
 def worktree_prune(canonical: Path) -> None:
     """Run ``git worktree prune`` against ``canonical``."""
 
-    _run(["worktree", "prune"], cwd=canonical)
+    run_git(["worktree", "prune"], cwd=canonical)
 
 
 def rebase_in_progress(path: Path) -> bool:
     """True if a rebase is currently in progress (e.g. left after a conflict)."""
 
-    result = _run(["rev-parse", "--git-dir"], cwd=path, check=False)
+    result = run_git(["rev-parse", "--git-dir"], cwd=path, check=False)
     if result.returncode != 0:
         return False
     git_dir = Path(result.stdout.strip())

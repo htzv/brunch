@@ -195,9 +195,9 @@ def _is_up_to_date(worktree: Path, target: str) -> bool:
 
     # We need `target` to be a parent of HEAD. `git merge-base --is-ancestor
     # <target> HEAD` returns 0 iff target is an ancestor.
-    from brunch.git import _run
+    from brunch.git import run_git
 
-    result = _run(
+    result = run_git(
         ["merge-base", "--is-ancestor", target, "HEAD"],
         cwd=worktree,
         check=False,
