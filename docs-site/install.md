@@ -47,8 +47,9 @@ branch, or a `directory` line with the checkout it was copied from.
 ## Replace an old install
 
 If `br --help` lacks commands you expect, such as `br agent` or `br drop`, your
-install is older than the docs. A copy made from a directory never updates by
-itself. Reinstall with `--force`, whatever the old install came from:
+install is older than the docs. An install made from a directory only has what
+that directory held, and does not follow `main` (see [Update](update.md)).
+Reinstall with `--force`, whatever the old install came from:
 
 ```bash
 uv tool install --force git+https://github.com/htzv/brunch@v0.1.0rc1
