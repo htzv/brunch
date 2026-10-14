@@ -43,6 +43,29 @@ been pushed, so the rules below are about not guessing.
 
 - **Tests use real git** in temporary directories. Do not mock git.
 
+## Code guidelines
+
+These apply to new and changed code. Do not refactor unrelated code in the same
+pull request.
+
+- **Small, focused files.** One file covers one aspect of the tool. When files
+  share a concern, group them in a directory. Around 200 to 250 lines of code
+  (not counting comments and docstrings) is the point where a file is too large.
+  This is a guide, not a hard limit, but going over needs a reason.
+- **Make the code say it.** Choose names that explain intent. When a block is hard
+  to read, split it into small functions and build the algorithm from them.
+- **Comment only what the code cannot say.** Do not narrate what the code does. Do
+  not record history ("we used to...") or argue for a decision. Names, test names
+  and test assertions carry the intent.
+- **No magic numbers.** Give every number a named constant
+  (`SCREAMING_SNAKE_CASE`).
+- **Use types for correctness and for reading.** Prefer enums, `Literal`, frozen
+  sets and frozen models over bare strings and mutable collections whenever a
+  value comes from a fixed set.
+- **Make illegal states impossible to represent**, as long as it stays simple. If
+  two fields only make sense together, model them as one type. Do not build
+  machinery for a state that cannot happen.
+
 ## Using `br` non-interactively
 
 - `--json` prints machine-readable output on most commands (`br agent list` and
