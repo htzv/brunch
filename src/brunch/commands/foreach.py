@@ -38,7 +38,20 @@ def foreach(
         False, "--dry-run", help="Show what would happen without doing it."
     ),
 ) -> None:
-    """Run a command in each repo of the workspace (or set)."""
+    """Run a command in every repo of the workspace, one after another.
+
+    The command runs with each worktree as its working directory, in the order the
+    repos appear in `brunch.toml`. It stops at the first failure unless
+    `--continue-on-error` is given. Put `--` before the command so brunch does not
+    read the command's flags. Output streams to the terminal. With `--json` it is
+    captured for each repo.
+
+    Example:
+
+    ```
+    br foreach -- git log -1 --oneline
+    ```
+    """
 
     location = discover_workspace(workspace or Path.cwd())
     cfg = load_config()

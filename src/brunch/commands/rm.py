@@ -30,7 +30,28 @@ def rm(
     ),
     json_output: bool = typer.Option(False, "--json", help="Emit JSON instead of text."),
 ) -> None:
-    """Remove the workspace (or set); archive first if --force."""
+    """Remove the workspace: delete its worktrees, then the workspace directory.
+
+    Refuses, and removes nothing, if any worktree has uncommitted changes,
+    untracked files, or commits that are not pushed. `--force` removes anyway,
+    after saving a tarball of the whole workspace in the `archives` folder of
+    brunch's data directory.
+
+    Only the worktrees listed in `brunch.toml` are deleted, and the branches stay
+    in the cloned repos. Any other file or folder in the workspace is kept. When
+    something is kept, `brunch.toml` stays too, so the directory remains a
+    workspace with no worktrees. When nothing else is left, the directory is
+    removed.
+
+    At a set root it removes every workspace in the set, and refuses if any
+    member refuses. Run it with `--dry-run` first.
+
+    Example:
+
+    ```
+    br rm --dry-run
+    ```
+    """
 
     location = discover_workspace(workspace or Path.cwd())
     cfg = load_config()

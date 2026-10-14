@@ -27,7 +27,23 @@ def adopt(
     ),
     json_output: bool = typer.Option(False, "--json", help="Emit JSON instead of text."),
 ) -> None:
-    """Adopt an existing folder of worktrees as a brunch workspace."""
+    """Turn a folder of hand-made worktrees into a brunch workspace.
+
+    Use it when you already created the worktrees with `git worktree add`. Brunch
+    reads each worktree's repo and branch, writes `brunch.toml`, then runs
+    `br sync` and `br fsck` to check the result. The worktrees are not moved or
+    changed, and folders that are not git repos are left alone. If any worktree
+    cannot be read, nothing is written.
+
+    It records `base = "main"` for every repo, because the real starting branch
+    cannot be worked out. Edit `brunch.toml` where a branch started elsewhere.
+
+    Example:
+
+    ```
+    br adopt ~/work/PROJECT-1234_add-export
+    ```
+    """
 
     target = (path or Path.cwd()).resolve()
     effective_name = name or target.name

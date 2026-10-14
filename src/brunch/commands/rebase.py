@@ -33,7 +33,24 @@ def rebase(
         False, "--dry-run", help="Show what would happen without doing it."
     ),
 ) -> None:
-    """Per-repo fetch + rebase onto base (or --onto). Stops on first conflict."""
+    """Fetch, then rebase each repo's branch onto its base.
+
+    For each repo, runs `git fetch`, then rebases the worktree's branch onto
+    `origin/<base>`. `<base>` is the branch recorded in `brunch.toml`. If there is
+    no `origin/<base>`, the local branch is used. `--onto <branch>` rebases onto
+    that branch instead, and replays only the commits made after the recorded
+    base.
+
+    It stops at the first conflict. That rebase stays in progress for you to
+    resolve with git. `--continue-on-error` carries on with the other repos.
+    `--no-fetch` skips the fetch, and `--autostash` is passed on to git.
+
+    Example:
+
+    ```
+    br rebase --onto origin/main
+    ```
+    """
 
     location = discover_workspace(workspace or Path.cwd())
     cfg = load_config()

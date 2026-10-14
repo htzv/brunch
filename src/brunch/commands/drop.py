@@ -25,7 +25,19 @@ def drop(
     ),
     json_output: bool = typer.Option(False, "--json", help="Emit JSON instead of a summary."),
 ) -> None:
-    """Remove a single repo's worktree (and its manifest entry) from the workspace."""
+    """Remove one repo's worktree and its `brunch.toml` entry.
+
+    The rest of the workspace and the cloned repo are left alone, and the branch
+    stays in the clone. It refuses if the worktree has uncommitted changes,
+    untracked files, or commits that are not pushed. `--force` overrides that.
+    REPO is the short name or the `org/repo` form.
+
+    Example:
+
+    ```
+    br drop backend --dry-run
+    ```
+    """
 
     location = discover_workspace(workspace or Path.cwd())
     outcome = drop_repo(location, load_config(), repo, force=force, dry_run=dry_run)

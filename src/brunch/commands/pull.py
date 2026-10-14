@@ -25,7 +25,20 @@ def pull(
         False, "--dry-run", help="Show what would happen without doing it."
     ),
 ) -> None:
-    """Fan out `git pull` across all repos in the workspace (or set)."""
+    """Run `git pull` in every repo of the workspace.
+
+    Updates each checked-out branch from its upstream, using your git pull
+    settings. A branch with no upstream cannot be pulled, and that repo is
+    reported as an error. This includes branches created by `br add`, until you
+    push them with `git push -u`. Repos with no remote are skipped. At a set root
+    it covers every workspace in the set. It exits 1 if any pull fails.
+
+    Example:
+
+    ```
+    br pull --dry-run
+    ```
+    """
 
     location = discover_workspace(workspace or Path.cwd())
     cfg = load_config()

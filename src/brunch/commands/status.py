@@ -22,7 +22,19 @@ def status(
     ),
     json_output: bool = typer.Option(False, "--json", help="Emit JSON instead of a table."),
 ) -> None:
-    """Summarised git status across all repos."""
+    """Show the git state of every repo in the workspace.
+
+    Prints one row per repo: its branch, whether it is clean, and how far it is
+    ahead of or behind its upstream. When a worktree is on a different branch than
+    `brunch.toml` declares, the row says so. Nothing is changed. At a set root it
+    shows one summary per workspace.
+
+    Example:
+
+    ```
+    br status --json
+    ```
+    """
 
     location = discover_workspace(workspace or Path.cwd())
     cfg = load_config()

@@ -31,7 +31,25 @@ def add(
     ),
     json_output: bool = typer.Option(False, "--json", help="Emit JSON instead of text."),
 ) -> None:
-    """Add a repo to the current workspace and create its worktree."""
+    """Add a repo to the workspace and create its worktree.
+
+    The repo must already be cloned under your brunch root, because brunch never
+    clones. The worktree is created at `./<repo-name>` on `--branch` (default: the
+    workspace name). A new branch starts from the local `--base` branch (default
+    `main`). Brunch does not fetch first, so that branch may be behind the remote.
+    If the branch already exists in the clone, it is checked out as it is and
+    `--base` is ignored.
+
+    It refuses if the branch is already checked out in another worktree. It does
+    not work at a set root. REPO is `org/repo` or `forge/org/repo`.
+
+    Example:
+
+    ```
+    br add example/backend
+    br add github.com/example/frontend --branch PROJECT-1234_frontend-only
+    ```
+    """
 
     location = discover_workspace(workspace or Path.cwd())
     cfg = load_config()
