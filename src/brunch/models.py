@@ -11,6 +11,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from brunch.schema import CURRENT_SCHEMA_VERSION, SchemaVersion
+
 # --- repo addressing -------------------------------------------------------
 
 
@@ -76,6 +78,7 @@ class WorkspaceManifest(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True, extra="forbid")
 
+    schema_version: SchemaVersion = CURRENT_SCHEMA_VERSION
     name: str
     description: str | None = None
     repos: list[RepoEntry] = Field(default_factory=list, alias="repo")
@@ -87,6 +90,7 @@ class SetManifest(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
+    schema_version: SchemaVersion = CURRENT_SCHEMA_VERSION
     name: str
     description: str | None = None
 

@@ -15,6 +15,7 @@ from pydantic import ValidationError
 
 from brunch.errors import ManifestError
 from brunch.models import SetManifest, WorkspaceManifest
+from brunch.schema import CURRENT_SCHEMA_VERSION, SCHEMA_VERSION_KEY
 
 
 def _load_toml(path: Path) -> dict[str, object]:
@@ -64,7 +65,10 @@ def write_workspace_manifest(path: Path, manifest: WorkspaceManifest) -> None:
     round-trip matches the spec in §4.1.
     """
 
-    data: dict[str, object] = {"name": manifest.name}
+    data: dict[str, object] = {
+        SCHEMA_VERSION_KEY: CURRENT_SCHEMA_VERSION,
+        "name": manifest.name,
+    }
     if manifest.description is not None:
         data["description"] = manifest.description
     if manifest.repos:
@@ -77,7 +81,10 @@ def write_workspace_manifest(path: Path, manifest: WorkspaceManifest) -> None:
 def write_set_manifest(path: Path, manifest: SetManifest) -> None:
     """Serialize a set manifest back to TOML."""
 
-    data: dict[str, object] = {"name": manifest.name}
+    data: dict[str, object] = {
+        SCHEMA_VERSION_KEY: CURRENT_SCHEMA_VERSION,
+        "name": manifest.name,
+    }
     if manifest.description is not None:
         data["description"] = manifest.description
     path.write_text(tomli_w.dumps(data), encoding="utf-8")
