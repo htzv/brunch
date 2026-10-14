@@ -71,6 +71,10 @@ pull request.
 There is no full release process yet. These rules cover how a pull request
 handles the version.
 
+The version is the `version` field in `pyproject.toml`, and nothing else defines
+it. `br --version` reads it from the installed package. After you change it, run
+`uv lock` and commit `uv.lock` in the same commit.
+
 - **Ask before you bump.** When you prepare a pull request, ask the person you
   are working with whether it should bump the version. Recommend a size:
   - **major** for a breaking change: a schema change, a changed default, or a

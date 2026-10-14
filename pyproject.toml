@@ -4,6 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "brunch"
+version = "0.0.1"
 description = "Mise en place for git worktree-based multi-repo task workspaces."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -22,7 +23,6 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
     "Topic :: Software Development :: Version Control :: Git",
 ]
-dynamic = ["version"]
 dependencies = [
     "typer>=0.12",
     "rich>=13.7",
@@ -51,9 +51,6 @@ br = "brunch.cli:app"
 [project.urls]
 # Placeholder until the repo finds its public home.
 Homepage = "https://example.invalid/brunch"
-
-[tool.hatch.version]
-path = "src/brunch/__init__.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/brunch"]

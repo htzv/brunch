@@ -6,6 +6,7 @@ plumbing and the stub-vs-implemented split.
 
 from __future__ import annotations
 
+import tomllib
 from pathlib import Path
 
 from typer.testing import CliRunner
@@ -23,6 +24,12 @@ def test_version_flag() -> None:
     result = runner.invoke(app, ["--version"])
     assert result.exit_code == 0
     assert __version__ in result.stdout
+
+
+def test_version_is_the_one_in_pyproject() -> None:
+    pyproject = Path(__file__).parent.parent / "pyproject.toml"
+    declared = tomllib.loads(pyproject.read_text(encoding="utf-8"))["project"]["version"]
+    assert __version__ == declared
 
 
 def test_all_v1_commands_registered() -> None:
