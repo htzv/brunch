@@ -79,6 +79,9 @@ handles the version.
   - **minor** for a backwards-compatible addition, such as a new command or flag;
   - **patch** for a bug fix, a docs-only change, or an internal change that does
     not affect user-facing behaviour or contracts.
+
+  While the major version is 0, a breaking change bumps the minor instead, and the
+  major version stays 0 until the person decides the basics are stable.
 - **Release candidates for pieces of a larger change.** Some changes are small
   only because of the size limit on pull requests, and belong to a larger piece of
   work. They do not deserve their own patch number. Recommend a release candidate
