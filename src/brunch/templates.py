@@ -23,6 +23,7 @@ from pydantic import ValidationError
 from brunch.config import user_config_dir
 from brunch.errors import TemplateError
 from brunch.models import WorkspaceManifest
+from brunch.website import TEMPLATES_DOCS_URL, WORKSPACE_MANIFEST_DOCS_URL
 
 TEMPLATE_DEFAULT_BASE = "main"
 
@@ -75,7 +76,7 @@ def materialise_template(template_id: str, *, workspace_name: str) -> WorkspaceM
         if not isinstance(repos, list):
             raise TemplateError(
                 f"template {path}: `repo` must be an array of tables",
-                hint="See docs/initial-design.md §5 for the shape.",
+                hint=f"See {TEMPLATES_DOCS_URL}",
             )
         for r in repos:
             if not isinstance(r, dict):
@@ -88,5 +89,5 @@ def materialise_template(template_id: str, *, workspace_name: str) -> WorkspaceM
     except ValidationError as e:
         raise TemplateError(
             f"template {path} does not match the manifest schema: {e}",
-            hint="See docs/initial-design.md §4.1 for required fields.",
+            hint=f"See {WORKSPACE_MANIFEST_DOCS_URL}",
         ) from e
