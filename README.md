@@ -12,6 +12,7 @@ A small CLI for setting up, synchronising, and tearing down **task workspaces** 
 - [Getting started](docs/getting-started.md) — a guided tour from install to first workspace and back.
 - [Functional design](docs/initial-design.md) — what brunch is, why each decision was made, alternatives considered, deferred work.
 - [Example templates](docs/examples/templates/) — starter templates for a fictional Kybernetix product.
+- [AGENTS.md](AGENTS.md) — rules for coding agents working on brunch or using `br`.
 - [Original prompt](DESIGN.md) — the handoff document that started the conversation. Kept for provenance.
 
 ## Install (development)
