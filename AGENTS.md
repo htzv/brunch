@@ -73,8 +73,12 @@ handles the version.
 
 - **Ask before you bump.** When you prepare a pull request, ask the person you
   are working with whether it should bump the version. Recommend a size:
-  - **minor** for a new command, a new flag, a changed default or a schema change;
-  - **patch** for a bug fix, a docs-only change or an internal change.
+  - **major** for a breaking change: a schema change, a changed default, or a
+    removed or renamed command or flag. Anything that makes existing files or
+    habits stop working;
+  - **minor** for a backwards-compatible addition, such as a new command or flag;
+  - **patch** for a bug fix, a docs-only change, or an internal change that does
+    not affect user-facing behaviour or contracts.
 - **Release candidates for pieces of a larger change.** Some changes are small
   only because of the size limit on pull requests, and belong to a larger piece of
   work. They do not deserve their own patch number. Recommend a release candidate
