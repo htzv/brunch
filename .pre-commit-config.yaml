@@ -1,0 +1,49 @@
+# The same checks CI runs, as local hooks that call uv, so nothing is fetched or
+# pinned separately from pyproject.toml. CI runs these hooks too.
+#
+#   scripts/pre-commit run --all-files                        # what CI runs per push
+#   scripts/pre-commit run --all-files --hook-stage manual    # slow extras, below
+#
+# Installing them as git hooks is optional: scripts/pre-commit install
+default_install_hook_types: [pre-commit]
+repos:
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: ruff check
+        entry: uv run ruff check .
+        language: system
+        pass_filenames: false
+        always_run: true
+      - id: ruff-format
+        name: ruff format --check
+        entry: uv run ruff format --check .
+        language: system
+        pass_filenames: false
+        always_run: true
+      - id: mypy
+        name: mypy src
+        entry: uv run mypy src
+        language: system
+        pass_filenames: false
+        always_run: true
+      - id: pytest
+        name: pytest (coverage gate, GITHUB_ACTIONS=true)
+        entry: scripts/run-tests.sh
+        language: system
+        pass_filenames: false
+        always_run: true
+      - id: pytest-all-pythons
+        name: pytest on every supported Python version
+        entry: scripts/run-tests-all-pythons.sh
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [manual]
+      - id: mkdocs
+        name: mkdocs build --strict
+        entry: uv run --extra docs mkdocs build --strict
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [manual]

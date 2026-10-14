@@ -29,9 +29,9 @@ jobs:
       - name: install deps
         run: uv sync --extra dev
       - name: ruff check
-        run: uv run ruff check .
+        run: scripts/pre-commit run ruff-check --all-files
       - name: ruff format check
-        run: uv run ruff format --check .
+        run: scripts/pre-commit run ruff-format --all-files
 
   typecheck:
     runs-on: ubuntu-24.04
@@ -43,29 +43,36 @@ jobs:
       - name: install deps
         run: uv sync --extra dev
       - name: mypy
-        run: uv run mypy src
+        run: scripts/pre-commit run mypy --all-files
+
+  python-versions:
+    runs-on: ubuntu-24.04
+    outputs:
+      versions: ${{ steps.read.outputs.versions }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: read
+        name: read scripts/python-versions.txt
+        run: echo "versions=$(jq -Rsc 'split("\n") | map(select(length > 0))' scripts/python-versions.txt)" >> "$GITHUB_OUTPUT"
 
   test:
     runs-on: ubuntu-24.04
+    needs: python-versions
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.11", "3.12", "3.13", "3.14", "3.15"]
+        python-version: ${{ fromJSON(needs.python-versions.outputs.versions) }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
           enable-cache: true
-      - name: install python ${{ matrix.python-version }}
-        run: uv python install ${{ matrix.python-version }}
-      - name: install deps
-        run: uv sync --extra dev --python ${{ matrix.python-version }}
       - name: configure git identity
         run: |
           git config --global user.name "brunch-ci"
           git config --global user.email "brunch-ci@example.invalid"
       - name: pytest (with coverage)
-        run: uv run --python ${{ matrix.python-version }} pytest --cov=brunch --cov-report=term-missing
+        run: scripts/run-tests.sh ${{ matrix.python-version }}
 
   build:
     runs-on: ubuntu-24.04
