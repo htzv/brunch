@@ -92,6 +92,36 @@ handles the version.
   `v0.1.3`, or `v0.1.3rc5` for a release candidate. After the bump is merged,
   propose the tag. Create and push it once the person agrees.
 
+## Writing docs and help text
+
+This covers READMEs, the docs site, `--help` text and docstrings. Write so that a
+tired colleague who has never used brunch can follow it.
+
+- **Start with who it is for and what they can do after reading.**
+- **Short sentences, concrete words, active voice.** One idea per sentence. Say
+  what a command does, and what it does not touch.
+- **Say it plainly.** Avoid metaphors and marketing words: "first-class",
+  "cooperative semantic layer", "ledger" (for anything but money), "earns its
+  keep", "unlocks", "spiritual successor", "seamless", "leverage".
+- **Keep design history out of user docs.** Why a decision was made belongs in the
+  design memo, not in the README or `--help`.
+- **Use bold sparingly** and do not stack em-dashes. If a sentence needs three
+  asides, split it.
+- **Examples use fictional repos**, such as `github.com/example.com/backend` and
+  `frontend`.
+- **Check every claim against the code or by running the command.** The rule
+  "verify, never assume" applies to docs too.
+
+Examples taken from the current docs:
+
+| Before | After |
+|---|---|
+| A worktree-aware spiritual successor to myrepos (`mr`), shaped around an agentic-coding workflow. | Like myrepos (`mr`), brunch runs git operations across several repos at once. It uses git worktrees, so each task gets its own working copy of every repo it touches. |
+| This is the moment the workspace earns its keep. Because both repos sit under a single directory, an agent that can read the filesystem has the full cross-repo picture in one shot. | Both repos sit under one directory, so an agent that can read files sees both without you copying context between them. |
+| Brunch sits on top of `git worktree` as a cooperative semantic layer. It never replaces git's own state, just orchestrates around it. | Brunch runs `git worktree` for you. It keeps no record of its own about which worktrees exist. It reads that from git and from `brunch.toml`. |
+| Both `brunch` and the short alias `br` are first-class. | `brunch` and `br` are the same command. |
+| brunch does **not** maintain a third ledger that shadows either of these. This is the most important architectural decision in the project. | Brunch keeps no separate list of worktrees. Git records which worktrees exist, and the workspace directory records which ones belong together. Brunch reads both each time it runs. |
+
 ## Using `br` non-interactively
 
 - `--json` prints machine-readable output on most commands (`br agent list` and
