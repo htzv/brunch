@@ -55,7 +55,8 @@ br --version
 ```
 
 [Install](docs-site/install.md) also covers local checkouts, checking what you
-have, and replacing an old install.
+have, and replacing an old install. [Update](docs-site/update.md) covers
+upgrading.
 
 ## Develop
 
