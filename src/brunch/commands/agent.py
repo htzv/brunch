@@ -69,7 +69,19 @@ def agent_new(
         None, "-w", "--workspace", help="Operate on the workspace at this path (default: cwd)."
     ),
 ) -> None:
-    """Start a new agent conversation and record it in brunch.toml."""
+    """Start a new agent conversation and record it in `brunch.toml`.
+
+    Starts `claude` or `opencode` in the workspace root, or in `-C <subdir>`.
+    Claude gets its session id from brunch up front. OpenCode assigns its own,
+    which brunch picks up a few seconds after launch and again when it exits.
+    `br agent sync` catches any it missed.
+
+    Example:
+
+    ```
+    br agent new claude --label PROJECT-1234_export-design
+    ```
+    """
 
     kind = _validate_kind(agent)
     location = discover_workspace(workspace or Path.cwd())
@@ -115,7 +127,13 @@ def agent_list(
     ),
     json_output: bool = typer.Option(False, "--json", help="Emit JSON instead of a table."),
 ) -> None:
-    """List agent conversations for this workspace (recorded + discovered)."""
+    """List agent conversations for this workspace.
+
+    Shows conversations recorded in `brunch.toml` and the ones found in the
+    agents' own stores for this workspace. `●` is recorded, `○` is found but not
+    recorded (`br agent sync` records it), and `⚠` is recorded but gone from the
+    store.
+    """
 
     location = discover_workspace(workspace or Path.cwd())
     listing = svc.list_conversations(location)
@@ -152,7 +170,18 @@ def agent_resume(
         None, "-w", "--workspace", help="Operate on the workspace at this path (default: cwd)."
     ),
 ) -> None:
-    """Resume a recorded conversation (cd to its dir, then hand off to the agent)."""
+    """Resume a conversation: change to its directory and hand over to the agent.
+
+    SELECTOR is a handle, a label, or the start of a session id. With no selector,
+    a single conversation is resumed, and several are offered as a numbered list,
+    which needs a terminal.
+
+    Example:
+
+    ```
+    br agent resume PROJECT-1234_export-design
+    ```
+    """
 
     import os
 
@@ -201,7 +230,17 @@ def agent_register(
         None, "-w", "--workspace", help="Operate on the workspace at this path (default: cwd)."
     ),
 ) -> None:
-    """Record a conversation you started outside `br agent new`."""
+    """Record a conversation you started outside `br agent new`.
+
+    Session ids belong to the machine that created them, so register a session on
+    the machine where it lives.
+
+    Example:
+
+    ```
+    br agent register claude 0b9c2f6e-1111-2222-3333-444455556666
+    ```
+    """
 
     kind = _validate_kind(agent)
     location = discover_workspace(workspace or Path.cwd())
@@ -223,7 +262,12 @@ def agent_sync(
     ),
     json_output: bool = typer.Option(False, "--json", help="Emit JSON instead of a summary."),
 ) -> None:
-    """Reconcile brunch.toml against the agent stores (adopt discovered, flag/prune stale)."""
+    """Reconcile `brunch.toml` with the agents' stores.
+
+    Records conversations that are in a store but not in `brunch.toml`. Recorded
+    conversations whose session is gone are reported as stale, and are removed
+    only with `--prune`.
+    """
 
     location = discover_workspace(workspace or Path.cwd())
     report = svc.sync(location, prune=prune)
@@ -251,7 +295,19 @@ def agent_rm(
         None, "-w", "--workspace", help="Operate on the workspace at this path (default: cwd)."
     ),
 ) -> None:
-    """Remove a conversation from the registry (and, with --purge, delete it)."""
+    """Remove a conversation from `brunch.toml`, and optionally delete it.
+
+    Without `--purge` only the `brunch.toml` entry goes. `--purge` also deletes
+    the session from the agent's own store. That cannot be undone. It asks you to
+    confirm unless `--yes` is given, refuses a session that looks active unless
+    `--force` is given, and needs `--enable-experimental=agent-rm`.
+
+    Example:
+
+    ```
+    br --enable-experimental=agent-rm agent rm PROJECT-1234_export-design --dry-run
+    ```
+    """
 
     experimental.require("agent-rm")
     location = discover_workspace(workspace or Path.cwd())

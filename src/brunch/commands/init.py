@@ -40,7 +40,23 @@ def init(
     ),
     json_output: bool = typer.Option(False, "--json", help="Emit JSON instead of text."),
 ) -> None:
-    """Create a new workspace or workspace set (or adopt an existing one)."""
+    """Create a workspace, or a workspace set, in a new directory.
+
+    Makes `<parent>/<name>` with a `brunch.toml` inside. It creates no worktrees
+    and runs no git, so add repos afterwards with `br add`. It refuses if the
+    directory already exists.
+
+    `--set` writes a `brunch-set.toml` instead, so the directory can hold several
+    workspaces. `-t <template>` fills the manifest from a template and creates
+    the template's worktrees. `--adopt` turns an existing directory into a
+    workspace, like `br adopt`.
+
+    Example:
+
+    ```
+    br init PROJECT-1234_add-export
+    ```
+    """
 
     target = (parent or Path.cwd()) / name
     cfg = load_config()

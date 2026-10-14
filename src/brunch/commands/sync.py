@@ -24,7 +24,20 @@ def sync(
         False, "--dry-run", help="Show what would happen without doing it."
     ),
 ) -> None:
-    """Reconcile on-disk worktrees with the manifest (non-destructive)."""
+    """Create missing worktrees and report anything that differs from `brunch.toml`.
+
+    Creates each worktree listed in the manifest that does not exist yet. It never
+    deletes or switches anything. It warns when a worktree is on a different
+    branch than the manifest declares, has uncommitted changes or untracked
+    files, or cannot be read by git. Warnings do not change the exit code; errors
+    do. It does not work at a set root.
+
+    Example:
+
+    ```
+    br sync --dry-run
+    ```
+    """
 
     location = discover_workspace(workspace or Path.cwd())
     cfg = load_config()

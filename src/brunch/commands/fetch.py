@@ -25,7 +25,18 @@ def fetch(
         False, "--dry-run", help="Show what would happen without doing it."
     ),
 ) -> None:
-    """Fan out `git fetch` across all repos in the workspace (or set)."""
+    """Run `git fetch` in every repo of the workspace.
+
+    Updates remote-tracking branches only. It does not change any checked-out
+    branch or file. Repos with no remote are skipped. At a set root it covers
+    every workspace in the set. It exits 1 if any fetch fails.
+
+    Example:
+
+    ```
+    br fetch
+    ```
+    """
 
     location = discover_workspace(workspace or Path.cwd())
     cfg = load_config()
