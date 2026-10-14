@@ -11,6 +11,8 @@ from typing import Annotated
 
 from pydantic import Field
 
+# TODO: document how to introduce a new schema version and keep reading older
+# ones. Brunch has no migrations yet.
 SCHEMA_VERSION_KEY = "schema_version"
 OLDEST_SCHEMA_VERSION = 1
 CURRENT_SCHEMA_VERSION = 2
