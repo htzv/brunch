@@ -79,7 +79,22 @@ def main(
 ) -> None:
     """Mise en place for git worktree-based multi-repo task workspaces.
 
-    Run `br <command> --help` for what a command does and which flags it takes.
+    A workspace is a directory with one git worktree per repo, for one task. By
+    default every worktree is on a branch named after the workspace. A typical
+    session:
+
+    ```
+    br init PROJECT-1234_add-export        # new workspace directory
+    cd PROJECT-1234_add-export
+    br add example/backend                 # worktree ./backend
+    br add github.com/example/frontend     # worktree ./frontend
+    br status                              # one table for all repos
+    br rm                                  # remove the workspace when done
+    ```
+
+    The repos must already be cloned under your brunch root, because brunch never
+    clones. Run `br <command> --help` for what a command does and which flags it
+    takes.
 
     Exit codes:
 
