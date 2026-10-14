@@ -17,6 +17,8 @@ from brunch.errors import ManifestError
 from brunch.models import SetManifest, WorkspaceManifest
 from brunch.schema import CURRENT_SCHEMA_VERSION, SCHEMA_VERSION_KEY
 
+UPDATE_DOCS_URL = "https://htzv.github.io/brunch/update/"
+
 
 def _load_toml(path: Path) -> dict[str, object]:
     if not path.is_file():
@@ -32,15 +34,42 @@ def _load_toml(path: Path) -> dict[str, object]:
         raise ManifestError(f"failed to read {path}: {e}") from e
 
 
+def _reject_newer_schema(raw: dict[str, object], path: Path) -> None:
+    """Refuse a file written by a newer brunch before validating its keys.
+
+    A newer file may have keys this brunch has never heard of, so validating it
+    would report those keys as errors instead of the real cause.
+    """
+
+    version = raw.get(SCHEMA_VERSION_KEY)
+    if isinstance(version, int) and not isinstance(version, bool):
+        if version > CURRENT_SCHEMA_VERSION:
+            raise ManifestError(
+                f"{path} was written by a newer brunch "
+                f"(file schema {version}, this brunch supports {CURRENT_SCHEMA_VERSION})",
+                hint=f"Update brunch: {UPDATE_DOCS_URL}",
+            )
+
+
+def _describe(error: ValidationError) -> str:
+    """One line per problem: ``key: message``."""
+
+    return "\n".join(
+        f"  {'.'.join(str(part) for part in problem['loc']) or '(file)'}: {problem['msg']}"
+        for problem in error.errors(include_url=False)
+    )
+
+
 def load_workspace_manifest(path: Path) -> WorkspaceManifest:
     """Load and validate a workspace manifest (``brunch.toml``)."""
 
     raw = _load_toml(path)
+    _reject_newer_schema(raw, path)
     try:
         return WorkspaceManifest.model_validate(raw)
     except ValidationError as e:
         raise ManifestError(
-            f"invalid workspace manifest at {path}: {e}",
+            f"invalid workspace manifest at {path}:\n{_describe(e)}",
             hint="See docs/initial-design.md §4.1 for the schema.",
         ) from e
 
@@ -49,11 +78,12 @@ def load_set_manifest(path: Path) -> SetManifest:
     """Load and validate a set manifest (``brunch-set.toml``)."""
 
     raw = _load_toml(path)
+    _reject_newer_schema(raw, path)
     try:
         return SetManifest.model_validate(raw)
     except ValidationError as e:
         raise ManifestError(
-            f"invalid set manifest at {path}: {e}",
+            f"invalid set manifest at {path}:\n{_describe(e)}",
             hint="See docs/initial-design.md §4.2 for the schema.",
         ) from e
 

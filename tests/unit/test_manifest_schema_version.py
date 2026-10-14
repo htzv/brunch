@@ -8,6 +8,7 @@ import pytest
 
 from brunch.errors import ManifestError
 from brunch.manifest import (
+    UPDATE_DOCS_URL,
     load_set_manifest,
     load_workspace_manifest,
     write_set_manifest,
@@ -84,3 +85,53 @@ class TestReading:
         path = _write(tmp_path, f"{SCHEMA_VERSION_KEY} = {NEWER_THAN_SUPPORTED}\nname = 'demo'\n")
         with pytest.raises(ManifestError):
             load_set_manifest(path)
+
+
+class TestNewerFile:
+    """A file from a newer brunch is named as such, not blamed on its keys."""
+
+    NEWER_FILE_WITH_UNKNOWN_KEY = (
+        f"{SCHEMA_VERSION_KEY} = {NEWER_THAN_SUPPORTED}\nname = 'demo'\nfuture_key = 1\n"
+    )
+
+    @pytest.mark.parametrize(
+        "load, text",
+        [
+            (load_workspace_manifest, NEWER_FILE_WITH_UNKNOWN_KEY),
+            (load_set_manifest, NEWER_FILE_WITH_UNKNOWN_KEY),
+        ],
+    )
+    def test_says_which_versions_are_involved_and_how_to_update(
+        self, tmp_path: Path, load: object, text: str
+    ) -> None:
+        path = _write(tmp_path, text)
+        with pytest.raises(ManifestError) as caught:
+            load(path)  # type: ignore[operator]
+        message = str(caught.value)
+        assert str(path) in message
+        assert "newer brunch" in message
+        assert f"file schema {NEWER_THAN_SUPPORTED}" in message
+        assert f"supports {CURRENT_SCHEMA_VERSION}" in message
+        assert "unknown" not in message.lower()
+        assert caught.value.hint is not None
+        assert UPDATE_DOCS_URL in caught.value.hint
+
+
+class TestUnknownKeyAtSupportedVersion:
+    def test_names_the_file_and_the_key_without_pydantic_noise(self, tmp_path: Path) -> None:
+        path = _write(
+            tmp_path, f"{SCHEMA_VERSION_KEY} = {CURRENT_SCHEMA_VERSION}\nname = 'x'\nbogus = 1\n"
+        )
+        with pytest.raises(ManifestError) as caught:
+            load_workspace_manifest(path)
+        message = str(caught.value)
+        assert str(path) in message
+        assert "bogus: Extra inputs are not permitted" in message
+        assert "pydantic.dev" not in message
+        assert "validation error" not in message
+
+    def test_nested_keys_are_named_by_path(self, tmp_path: Path) -> None:
+        path = _write(tmp_path, 'name = "x"\n[[repo]]\nrepo = "a/b"\nbogus = 1\n')
+        with pytest.raises(ManifestError) as caught:
+            load_workspace_manifest(path)
+        assert "repo.0.bogus" in str(caught.value)
