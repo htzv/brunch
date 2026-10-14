@@ -66,6 +66,25 @@ pull request.
   two fields only make sense together, model them as one type. Do not build
   machinery for a state that cannot happen.
 
+## Versions and releases
+
+There is no full release process yet. These rules cover how a pull request
+handles the version.
+
+- **Ask before you bump.** When you prepare a pull request, ask the person you
+  are working with whether it should bump the version. Recommend a size:
+  - **minor** for a new command, a new flag, a changed default or a schema change;
+  - **patch** for a bug fix, a docs-only change or an internal change.
+- **Release candidates for pieces of a larger change.** Some changes are small
+  only because of the size limit on pull requests, and belong to a larger piece of
+  work. They do not deserve their own patch number. Recommend a release candidate
+  of the next version instead, for example `0.1.3rc5`. The final pull request of
+  the set drops the suffix (`0.1.3`).
+- **Bump in its own commit**, and only when the person says yes.
+- **Tag releases.** A release is a git tag on the commit that bumped the version:
+  `v0.1.3`, or `v0.1.3rc5` for a release candidate. After the bump is merged,
+  propose the tag. Create and push it once the person agrees.
+
 ## Using `br` non-interactively
 
 - `--json` prints machine-readable output on most commands (`br agent list` and
