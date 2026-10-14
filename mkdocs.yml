@@ -76,6 +76,7 @@ extra_javascript:
 
 nav:
   - Home: index.md
+  - Install: install.md
   - Walkthrough:
       - walkthrough/index.md
       - 0. Setup: walkthrough/00-setup.md

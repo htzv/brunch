@@ -50,9 +50,12 @@ default_forge = "github.com"
 Needs Python 3.11 or newer and [uv](https://docs.astral.sh/uv/).
 
 ```bash
-uv tool install git+https://github.com/htzv/brunch
+uv tool install git+https://github.com/htzv/brunch@v0.1.0rc1
 br --version
 ```
+
+[Install](docs-site/install.md) also covers local checkouts, checking what you
+have, and replacing an old install.
 
 ## Develop
 
