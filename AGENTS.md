@@ -17,6 +17,16 @@ been pushed, so the rules below are about not guessing.
 2. **Keep throwaway scripts out of git.** Put them in `_scripts/` at the root of
    the task's br workspace, next to the worktree and so outside the repository.
    For a check that spans several tasks, use `_scripts/` in the parent workspace.
+   We recommend, but do not require, running them under
+   `nono`, a command-line sandbox that limits what a command can read and write:
+
+   ```bash
+   nono run --allow <tmpdir> --allow "$(uv cache dir)" --read <scripts dir> -- <command>
+   ```
+
+   Reads outside the allowed paths are denied, including the script itself. Git
+   also needs its global config out of the way (set `XDG_CONFIG_HOME` to the temp
+   directory). Network access is allowed by default.
 3. **Preview before you delete.** Run `br rm`, `br drop` and `br agent rm --purge`
    with `--dry-run` first, and read the result.
 4. **Do not use `--force` to get past a refusal.** A refusal means the worktree has
@@ -40,6 +50,22 @@ been pushed, so the rules below are about not guessing.
   uv run pytest --cov=brunch      # CI fails below 85% coverage
   uv run mkdocs build --strict    # when docs changed
   ```
+
+- **Test on every supported Python version.** The versions are the matrix in
+  `.github/workflows/ci.yml`. The Python in your own venv is not necessarily one
+  CI uses, so run the suite on each version in the matrix:
+
+  ```bash
+  uv run --python <version> --extra dev pytest -q --cov=brunch
+  ```
+
+  This replaces the venv in your worktree, and a plain `uv sync` keeps the Python
+  that ran last. To pick one, run `uv sync --extra dev --python <version>`.
+- **Tests must not depend on the terminal or on CI environment variables.** Typer
+  forces coloured output when `GITHUB_ACTIONS` is set, which once broke a test that
+  passed locally. Run the suite once with `GITHUB_ACTIONS=true uv run pytest`, and
+  test text at its source (a docstring, a model) rather than parsing rendered
+  output.
 
 - **Tests use real git** in temporary directories. Do not mock git.
 
