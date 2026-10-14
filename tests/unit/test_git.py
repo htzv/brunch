@@ -26,6 +26,7 @@ from brunch.git import (
     worktree_list,
     worktree_prune,
 )
+from tests.conftest import OriginRepo, _git
 
 
 class TestIsGitRepo:
@@ -182,7 +183,7 @@ class TestAddWorktree:
     def test_creates_new_branch(self, make_canonical: Callable[..., Path], tmp_path: Path) -> None:
         repo = make_canonical()
         target = tmp_path / "new-worktree"
-        add_worktree(repo, target, branch="feature-x", base="main")
+        add_worktree(repo, target, branch="feature-x", start_point="main")
         assert target.is_dir()
         assert (target / ".git").exists()
         # New worktree is on its branch.
@@ -205,14 +206,53 @@ class TestAddWorktree:
             capture_output=True,
         )
         target = tmp_path / "wt"
-        add_worktree(repo, target, branch="preexisting", base="main")
+        add_worktree(repo, target, branch="preexisting", start_point="main")
         assert current_branch(target) == "preexisting"
 
     def test_makes_parent_dirs(self, make_canonical: Callable[..., Path], tmp_path: Path) -> None:
         repo = make_canonical()
         target = tmp_path / "a" / "b" / "c" / "wt"
-        add_worktree(repo, target, branch="feat", base="main")
+        add_worktree(repo, target, branch="feat", start_point="main")
         assert target.is_dir()
+
+
+class TestAddWorktreeStartPoint:
+    def test_new_branch_is_created_from_the_start_point_without_tracking_it(
+        self, make_origin: Callable[..., OriginRepo], tmp_path: Path
+    ) -> None:
+        origin = make_origin()
+        tip = origin.advance()
+        subprocess.run(["git", "fetch", "origin"], cwd=origin.canonical, check=True)
+        target = tmp_path / "wt"
+
+        created = add_worktree(origin.canonical, target, branch="feat", start_point="origin/main")
+
+        assert created is True
+        assert _git(["rev-parse", "HEAD"], cwd=target).strip() == tip
+        upstream = subprocess.run(
+            ["git", "config", "--get", "branch.feat.remote"],
+            cwd=origin.canonical,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        assert upstream.stdout.strip() == ""
+
+    def test_existing_branch_is_checked_out_as_it_is_and_reported(
+        self, make_origin: Callable[..., OriginRepo], tmp_path: Path
+    ) -> None:
+        origin = make_origin()
+        _git(["branch", "feat", "main"], cwd=origin.canonical)
+        local_tip = _git(["rev-parse", "feat"], cwd=origin.canonical).strip()
+        origin.advance()
+        subprocess.run(["git", "fetch", "origin"], cwd=origin.canonical, check=True)
+
+        created = add_worktree(
+            origin.canonical, tmp_path / "wt", branch="feat", start_point="origin/main"
+        )
+
+        assert created is False
+        assert _git(["rev-parse", "HEAD"], cwd=tmp_path / "wt").strip() == local_tip
 
 
 class TestRemoveWorktree:
@@ -221,7 +261,7 @@ class TestRemoveWorktree:
     ) -> None:
         repo = make_canonical()
         target = tmp_path / "wt"
-        add_worktree(repo, target, branch="feat", base="main")
+        add_worktree(repo, target, branch="feat", start_point="main")
         remove_worktree(repo, target)
         assert not target.exists()
         branches = {w.branch for w in worktree_list(repo)}
@@ -232,7 +272,7 @@ class TestRemoveWorktree:
     ) -> None:
         repo = make_canonical()
         target = tmp_path / "wt"
-        add_worktree(repo, target, branch="feat", base="main")
+        add_worktree(repo, target, branch="feat", start_point="main")
         (target / "dirty.txt").write_text("changes\n", encoding="utf-8")
         # Without force, git would refuse.
         remove_worktree(repo, target, force=True)

@@ -94,9 +94,12 @@ def add_repo(
             base=base,
             worktree_path=worktree_path,
             dry_run=True,
+            branch_existed=git.branch_exists(canonical, effective_branch),
         )
 
-    git.add_worktree(canonical, worktree_path, branch=effective_branch, base=base)
+    created_branch = git.add_worktree(
+        canonical, worktree_path, branch=effective_branch, start_point=base
+    )
     manifest.repos.append(RepoEntry(repo=repo, branch=effective_branch, base=base))
     write_workspace_manifest(location.manifest_path, manifest)
 
@@ -105,6 +108,7 @@ def add_repo(
         branch=effective_branch,
         base=base,
         worktree_path=worktree_path,
+        branch_existed=not created_branch,
     )
 
 

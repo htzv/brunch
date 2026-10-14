@@ -257,6 +257,8 @@ class AddOutcome(BaseModel):
     base: str
     worktree_path: Path
     dry_run: bool = False
+    branch_existed: bool = False
+    """The branch was already in the canonical clone, so ``base`` did not decide where it starts."""
 
 
 class InitOutcome(BaseModel):
