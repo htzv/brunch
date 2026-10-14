@@ -178,7 +178,7 @@ def _create_worktree(
         )
 
     try:
-        git.add_worktree(canonical, worktree, branch=entry.branch, base=entry.base)
+        git.add_worktree(canonical, worktree, branch=entry.branch, start_point=entry.base)
     except Exception as e:
         return SyncAction(
             repo=entry.repo,

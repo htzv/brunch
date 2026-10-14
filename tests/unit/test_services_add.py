@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import shutil
+import subprocess
 from collections.abc import Callable
 from pathlib import Path
 
@@ -195,3 +196,52 @@ class TestAddRepoErrors:
         loc = WorkspaceLocation(mode="set", root=tmp_path, manifest_path=marker)
         with pytest.raises(WorkspaceNotFoundError):
             add_repo(loc, ToolConfig(), repo="kybernetix/api")
+
+
+class TestAddWhenBranchAlreadyExists:
+    """The base cannot decide where an existing branch starts, so say so."""
+
+    def _setup(
+        self,
+        tmp_path: Path,
+        make_canonical: Callable[..., Path],
+        make_workspace: Callable[..., Path],
+    ) -> tuple[WorkspaceLocation, ToolConfig]:
+        canonical_root = tmp_path / "canonical-root"
+        canonical = _install_canonical(make_canonical, canonical_root, name="api")
+        subprocess.run(
+            ["git", "branch", "billing-flow", "main"],
+            cwd=canonical,
+            check=True,
+            capture_output=True,
+        )
+        return _make_workspace(make_workspace("billing-flow")), _config(canonical_root)
+
+    def test_outcome_says_the_branch_existed(
+        self,
+        tmp_path: Path,
+        make_canonical: Callable[..., Path],
+        make_workspace: Callable[..., Path],
+    ) -> None:
+        loc, config = self._setup(tmp_path, make_canonical, make_workspace)
+        assert add_repo(loc, config, repo="kybernetix/api").branch_existed is True
+
+    def test_dry_run_predicts_it(
+        self,
+        tmp_path: Path,
+        make_canonical: Callable[..., Path],
+        make_workspace: Callable[..., Path],
+    ) -> None:
+        loc, config = self._setup(tmp_path, make_canonical, make_workspace)
+        assert add_repo(loc, config, repo="kybernetix/api", dry_run=True).branch_existed is True
+
+    def test_a_new_branch_is_not_reported_as_existing(
+        self,
+        tmp_path: Path,
+        make_canonical: Callable[..., Path],
+        make_workspace: Callable[..., Path],
+    ) -> None:
+        canonical_root = tmp_path / "canonical-root"
+        _install_canonical(make_canonical, canonical_root, name="api")
+        loc = _make_workspace(make_workspace("fresh"))
+        assert add_repo(loc, _config(canonical_root), repo="kybernetix/api").branch_existed is False
