@@ -22,14 +22,29 @@ def fsck(
     ),
     json_output: bool = typer.Option(False, "--json", help="Emit JSON instead of text."),
     fix: bool = typer.Option(
-        False, "--fix", help="Apply safe automatic remediations (parked for M5+)."
+        False, "--fix", help="Accepted, but no check has an automatic fix yet."
     ),
 ) -> None:
-    """Diagnose workspace (or set) health; with --fix, perform safe remediations."""
+    """Check that the workspace matches `brunch.toml` and git.
+
+    Reports a missing or unreadable worktree or clone, a worktree on a different
+    branch than declared (`branch-drift`), a branch checked out in two places, and
+    folders that look like worktrees but are not in the manifest. It only reads.
+    It exits 1 when a check finds an error. Warnings alone exit 0.
+
+    `--fix` is accepted but does nothing yet, because no check has an automatic
+    fix.
+
+    Example:
+
+    ```
+    br fsck --json
+    ```
+    """
 
     if fix:
         typer.secho(
-            "brunch fsck --fix: no fixable issues in this milestone (gc lands later).",
+            "brunch fsck --fix: no check has an automatic fix yet.",
             fg=typer.colors.YELLOW,
             err=True,
         )

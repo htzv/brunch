@@ -47,9 +47,9 @@ def _handle_errors(handler: Callable[..., Any]) -> Callable[..., Any]:
 
 app = typer.Typer(
     name="brunch",
-    help="Mise en place for git worktree-based multi-repo task workspaces.",
     no_args_is_help=True,
     add_completion=False,
+    rich_markup_mode="markdown",
 )
 
 
@@ -77,7 +77,28 @@ def main(
         ),
     ),
 ) -> None:
-    """Mise en place for git worktree-based multi-repo task workspaces."""
+    """Mise en place for git worktree-based multi-repo task workspaces.
+
+    Run `br <command> --help` for what a command does and which flags it takes.
+
+    Exit codes:
+
+    | Code | Meaning |
+    |---|---|
+    | 0 | Success |
+    | 1 | Refused or failed, for example `rm` found work at risk |
+    | 2 | Usage error, or an experimental feature used without opting in |
+    | 3 | No workspace found |
+    | 4 | Invalid `brunch.toml` |
+    | 5 | Invalid tool config |
+    | 6 | Invalid repo spec |
+    | 7 | A git command failed |
+    | 8 | Template error |
+    | 9 | Target already exists |
+    | 10 | Branch is already checked out elsewhere |
+    | 11 | Repo is already in the workspace |
+    | 12 | Agent error |
+    """
     try:
         experimental.set_enabled(enable_experimental)
     except BrunchError as e:
@@ -88,35 +109,21 @@ def main(
 
 
 # Register subcommands. Each module exposes a single function named after the
-# command it implements; ``_handle_errors`` translates BrunchError into clean
-# stderr output and stable exit codes.
-app.command("init", help="Create a new workspace (or set with --set).")(_handle_errors(init.init))
-app.command(
-    "adopt",
-    help="Retroactively bring an existing folder of worktrees under brunch.",
-)(_handle_errors(adopt.adopt))
-app.command("add", help="Add a repo to the current workspace; create its worktree.")(
-    _handle_errors(add.add)
-)
-app.command("sync", help="Reconcile on-disk worktrees with the manifest.")(
-    _handle_errors(sync.sync)
-)
-app.command("status", help="Summarised git status across all repos.")(_handle_errors(status.status))
-app.command("fetch", help="Fan out `git fetch` across all repos.")(_handle_errors(fetch.fetch))
-app.command("pull", help="Fan out `git pull` across all repos.")(_handle_errors(pull.pull))
-app.command("rebase", help="Per-repo fetch + rebase onto base (or --onto).")(
-    _handle_errors(rebase.rebase)
-)
-app.command("foreach", help="Run a command in each repo of the workspace.")(
-    _handle_errors(foreach.foreach)
-)
-app.command("rm", help="Remove the workspace; archive first if --force.")(_handle_errors(rm.rm))
-app.command("drop", help="Remove one repo's worktree from the workspace (safety-checked).")(
-    _handle_errors(drop.drop)
-)
-app.command("fsck", help="Diagnose workspace health; --fix runs safe remediations.")(
-    _handle_errors(fsck.fsck)
-)
+# command it implements. Its docstring is the command's help text.
+# ``_handle_errors`` translates BrunchError into clean stderr output and stable
+# exit codes.
+app.command("init")(_handle_errors(init.init))
+app.command("adopt")(_handle_errors(adopt.adopt))
+app.command("add")(_handle_errors(add.add))
+app.command("sync")(_handle_errors(sync.sync))
+app.command("status")(_handle_errors(status.status))
+app.command("fetch")(_handle_errors(fetch.fetch))
+app.command("pull")(_handle_errors(pull.pull))
+app.command("rebase")(_handle_errors(rebase.rebase))
+app.command("foreach")(_handle_errors(foreach.foreach))
+app.command("rm")(_handle_errors(rm.rm))
+app.command("drop")(_handle_errors(drop.drop))
+app.command("fsck")(_handle_errors(fsck.fsck))
 
 # `br agent …` — coding-agent conversation registry (Claude Code / OpenCode).
 agent_app = typer.Typer(
@@ -124,26 +131,14 @@ agent_app = typer.Typer(
     help="Start, list, resume, and reconcile coding-agent conversations for this workspace.",
     no_args_is_help=True,
     add_completion=False,
+    rich_markup_mode="markdown",
 )
-agent_app.command("new", help="Start a new conversation and record it in brunch.toml.")(
-    _handle_errors(agent.agent_new)
-)
-agent_app.command("list", help="List recorded + discovered conversations.")(
-    _handle_errors(agent.agent_list)
-)
-agent_app.command("resume", help="Resume a conversation (picker if no selector).")(
-    _handle_errors(agent.agent_resume)
-)
-agent_app.command("register", help="Record a conversation started outside `br agent new`.")(
-    _handle_errors(agent.agent_register)
-)
-agent_app.command("sync", help="Reconcile brunch.toml against the agent stores.")(
-    _handle_errors(agent.agent_sync)
-)
-agent_app.command(
-    "rm",
-    help="Remove a conversation from the registry; --purge also deletes it (experimental).",
-)(_handle_errors(agent.agent_rm))
+agent_app.command("new")(_handle_errors(agent.agent_new))
+agent_app.command("list")(_handle_errors(agent.agent_list))
+agent_app.command("resume")(_handle_errors(agent.agent_resume))
+agent_app.command("register")(_handle_errors(agent.agent_register))
+agent_app.command("sync")(_handle_errors(agent.agent_sync))
+agent_app.command("rm")(_handle_errors(agent.agent_rm))
 app.add_typer(agent_app)
 
 

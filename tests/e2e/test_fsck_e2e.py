@@ -86,7 +86,7 @@ class TestFsckE2E:
         assert payload["workspace_name"] == ws.name
         assert payload["findings"] == []
 
-    def test_fix_emits_m5_notice(
+    def test_fix_says_no_check_has_an_automatic_fix_yet(
         self,
         isolated_home: Path,
         make_canonical: Callable[..., Path],
@@ -95,8 +95,5 @@ class TestFsckE2E:
     ) -> None:
         ws = _setup_clean(isolated_home, make_canonical, make_workspace, worktree_factory)
         result = runner.invoke(app, ["fsck", "-w", str(ws), "--fix"])
-        # --fix prints a notice to stderr; CliRunner mixes streams by default.
-        assert "no fixable issues" in result.output or "no fixable issues" in (
-            result.stderr if hasattr(result, "stderr") else ""
-        )
+        assert "no check has an automatic fix yet" in result.output
         assert result.exit_code == 0
