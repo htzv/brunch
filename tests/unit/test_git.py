@@ -137,6 +137,25 @@ class TestPorcelainV2Parser:
         assert s.has_untracked is True
 
 
+FIXTURES = Path(__file__).resolve().parents[1] / "fixtures"
+
+
+class TestPorcelainWithADeletedUpstream:
+    """Real `git status --porcelain=v2 --branch` output (git 2.53), see tests/fixtures."""
+
+    def test_present_upstream_reports_ahead_and_behind(self) -> None:
+        s = _parse_porcelain_v2((FIXTURES / "status_upstream_present.txt").read_text())
+        assert s.upstream == "origin/feat"
+        assert (s.ahead, s.behind) == (0, 0)
+
+    def test_gone_upstream_keeps_the_name_but_has_no_ahead_count(self) -> None:
+        """After `git fetch --prune` git omits `branch.ab`: `ahead` reads 0 whatever is unpushed."""
+
+        s = _parse_porcelain_v2((FIXTURES / "status_upstream_gone.txt").read_text())
+        assert s.upstream == "origin/feat"
+        assert s.ahead == 0
+
+
 class TestWorktreeListParser:
     def test_single_worktree(self) -> None:
         text = "worktree /a/b\nHEAD abc123\nbranch refs/heads/main\n\n"
