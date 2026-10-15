@@ -35,6 +35,29 @@ class TestFetchRemote:
         git_remote.fetch_remote(origin.canonical, "origin")
         assert _rev(origin.canonical, "origin/main") == tip
 
+    def test_prune_drops_refs_of_branches_the_remote_deleted(self, make_origin: MakeOrigin) -> None:
+        origin = make_origin()
+        origin.publish_branch("gone-soon")
+        git_remote.fetch_remote(origin.canonical, "origin")
+        _git(["branch", "-D", "gone-soon"], cwd=origin.bare)
+
+        git_remote.fetch_remote(origin.canonical, "origin")
+        assert "origin/gone-soon" in _git(["branch", "-r"], cwd=origin.canonical)
+
+        git_remote.fetch_remote(origin.canonical, "origin", prune=True)
+        assert "origin/gone-soon" not in _git(["branch", "-r"], cwd=origin.canonical)
+
+    def test_every_remote_is_fetched_even_one_that_fetch_all_skips(
+        self, make_origin: MakeOrigin
+    ) -> None:
+        origin = make_origin()
+        _git(["config", "remote.origin.skipDefaultUpdate", "true"], cwd=origin.canonical)
+        tip = origin.advance()
+
+        git_remote.fetch_every_remote(origin.canonical)
+
+        assert _rev(origin.canonical, "origin/main") == tip
+
     def test_unreachable_remote_raises_fetch_error_with_offline_hint(
         self, make_origin: MakeOrigin, tmp_path: Path
     ) -> None:

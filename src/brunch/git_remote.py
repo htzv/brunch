@@ -24,11 +24,15 @@ def remotes(path: Path) -> list[str]:
     return run_git(["remote"], cwd=path).stdout.split()
 
 
-def fetch_remote(path: Path, remote: str) -> None:
-    """Run ``git fetch <remote>``; raise ``FetchError`` if it fails."""
+def fetch_remote(path: Path, remote: str, *, prune: bool = False) -> None:
+    """Run ``git fetch <remote>``; raise ``FetchError`` if it fails.
+
+    With ``prune``, remote-tracking refs for branches the remote deleted are
+    dropped, so a branch deleted without being merged no longer looks pushed.
+    """
 
     try:
-        run_git(["fetch", remote], cwd=path)
+        run_git(["fetch", *(["--prune"] if prune else []), remote], cwd=path)
     except GitError as e:
         raise FetchError(f"could not fetch {remote!r}: {e}", hint=USE_NO_FETCH_HINT) from e
 
@@ -82,17 +86,15 @@ def default_branch(path: Path, remote: str) -> str:
     return FALLBACK_DEFAULT_BRANCH
 
 
-def fetch_all_remotes(path: Path) -> None:
-    """Run ``git fetch --all --prune``; raise ``FetchError`` if it fails.
+def fetch_every_remote(path: Path) -> None:
+    """Fetch and prune each configured remote by name; raise ``FetchError`` on the first failure.
 
-    Pruning drops remote-tracking refs for branches the remote has deleted, so
-    a branch that was deleted without being merged no longer looks pushed.
+    Not ``git fetch --all``: that silently skips a remote configured with
+    ``skipDefaultUpdate``, whose stale refs would then still count as pushed.
     """
 
-    try:
-        run_git(["fetch", "--all", "--prune"], cwd=path)
-    except GitError as e:
-        raise FetchError(f"could not fetch: {e}", hint=USE_NO_FETCH_HINT) from e
+    for remote in remotes(path):
+        fetch_remote(path, remote, prune=True)
 
 
 def count_commits_on_no_remote(path: Path, *also_not_in: str) -> int:

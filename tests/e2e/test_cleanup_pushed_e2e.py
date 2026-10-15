@@ -170,12 +170,29 @@ def test_a_set_fetches_each_clone_once(
         runner.invoke(app, ["init", member, "-p", str(set_root)])
         runner.invoke(app, ["add", "kybernetix/api", "-w", str(set_root / member)])
     calls: list[Path] = []
-    real = git_remote.fetch_all_remotes
+    real = git_remote.fetch_every_remote
     monkeypatch.setattr(
-        git_remote, "fetch_all_remotes", lambda path: (calls.append(path), real(path))[1]
+        git_remote, "fetch_every_remote", lambda path: (calls.append(path), real(path))[1]
     )
 
     result = runner.invoke(app, ["rm", "-w", str(set_root), "--dry-run"])
 
     assert result.exit_code == 0, result.output
     assert calls == [origin.canonical]
+
+
+class TestRemoteThatPlainFetchAllSkips:
+    """`remote.<name>.skipDefaultUpdate` makes `git fetch --all` skip a remote silently."""
+
+    def test_a_branch_deleted_on_a_skipped_remote_is_still_pruned(self, stale_setup: Setup) -> None:
+        origin, ws, _ = stale_setup
+        worktree = _add(ws)
+        _commit(worktree, "only ever pushed to a branch that is now gone")
+        _git(["push", "-u", "origin", "task-1"], cwd=worktree)
+        _git(["config", "remote.origin.skipDefaultUpdate", "true"], cwd=origin.canonical)
+        _git(["branch", "-D", "task-1"], cwd=origin.bare)
+
+        result = runner.invoke(app, ["rm", "-w", str(ws), "--dry-run"])
+
+        assert result.exit_code != 0
+        assert "1 unpushed commit" in result.output

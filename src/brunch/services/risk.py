@@ -36,14 +36,14 @@ def clones_to_refresh(
 
 
 def refresh_remotes(clones: Iterable[Path]) -> None:
-    """Fetch and prune every remote of each distinct clone, once.
+    """Fetch and prune every remote, by name, of each distinct clone, once.
 
     A failed fetch raises ``FetchError``, so nothing is judged, let alone
     removed, on stale refs.
     """
 
     for clone in dict.fromkeys(clones):
-        git_remote.fetch_all_remotes(clone)
+        git_remote.fetch_every_remote(clone)
 
 
 def assess_repo(entry: RepoEntry, workspace_root: Path, config: ToolConfig) -> RmRisk:
