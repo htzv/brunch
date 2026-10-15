@@ -189,7 +189,7 @@ def rm_set(
     members = discover_set_members(location.root)
 
     # Fetch once for the whole set; the member calls below then skip their own.
-    if fetch:
+    fetch_warnings = (
         refresh_remotes(
             clone
             for member in members
@@ -197,6 +197,9 @@ def rm_set(
                 load_workspace_manifest(member.manifest_path).repos, member.root, config
             )
         )
+        if fetch
+        else []
+    )
 
     # Phase 1: dry-run each member without forcing — surfaces refusals.
     previews = [rm_workspace(m, config, force=False, dry_run=True, fetch=False) for m in members]
@@ -206,6 +209,7 @@ def rm_set(
         return SetRmOutcome(
             set_name=set_manifest.name,
             set_path=location.root,
+            fetch_warnings=fetch_warnings,
             action="refused",
             members=previews,
             forced=False,
@@ -228,6 +232,7 @@ def rm_set(
         return SetRmOutcome(
             set_name=set_manifest.name,
             set_path=location.root,
+            fetch_warnings=fetch_warnings,
             action=planned_action,
             members=planned,
             preserved=planned_preserved,
@@ -280,6 +285,7 @@ def rm_set(
     return SetRmOutcome(
         set_name=set_manifest.name,
         set_path=location.root,
+        fetch_warnings=fetch_warnings,
         action=outcome_action,
         members=member_outcomes,
         preserved=preserved,

@@ -35,15 +35,18 @@ def clones_to_refresh(
     return clones
 
 
-def refresh_remotes(clones: Iterable[Path]) -> None:
+def refresh_remotes(clones: Iterable[Path]) -> list[str]:
     """Fetch and prune every remote, by name, of each distinct clone, once.
 
-    A failed fetch raises ``FetchError``, so nothing is judged, let alone
-    removed, on stale refs.
+    Like git, work offline: a failed fetch is not an error. It comes back as a
+    warning, and the verdict then rests on the remote refs from the last fetch.
     """
 
-    for clone in dict.fromkeys(clones):
-        git_remote.fetch_every_remote(clone)
+    return [
+        f"{clone}: {failure}"
+        for clone in dict.fromkeys(clones)
+        for failure in git_remote.fetch_every_remote(clone)
+    ]
 
 
 def assess_repo(entry: RepoEntry, workspace_root: Path, config: ToolConfig) -> RmRisk:

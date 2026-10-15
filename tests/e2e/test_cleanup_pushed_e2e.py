@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -130,19 +131,62 @@ class TestFetchBeforeJudging:
         assert _git(["rev-parse", "origin/main"], cwd=origin.canonical).strip() != new_tip
 
     @pytest.mark.parametrize("args", [["rm", "--dry-run"], ["drop", "api", "--dry-run"]])
-    def test_an_unreachable_remote_stops_everything_with_a_hint(
+    def test_an_unreachable_remote_only_warns(
         self, stale_setup: Setup, tmp_path: Path, args: list[str]
     ) -> None:
+        """Like git, work offline: judge by the remote refs already there, and say so."""
+
         origin, ws, _ = stale_setup
         _add(ws)
         _git(["remote", "set-url", "origin", str(tmp_path / "gone.git")], cwd=origin.canonical)
 
         result = runner.invoke(app, [*args, "-w", str(ws)])
 
-        assert result.exit_code == 7
-        assert "could not fetch" in result.output
-        assert "--no-fetch" in result.output
+        assert result.exit_code == 0, result.output
+        assert "warning:" in result.output
+        assert "could not fetch 'origin'" in result.output
+        assert "last fetch" in result.output
         assert (ws / "api").exists()
+
+    @pytest.mark.parametrize("args", [["rm", "--dry-run"], ["drop", "api", "--dry-run"]])
+    def test_the_warning_is_in_the_json_too(
+        self, stale_setup: Setup, tmp_path: Path, args: list[str]
+    ) -> None:
+        origin, ws, _ = stale_setup
+        _add(ws)
+        _git(["remote", "set-url", "origin", str(tmp_path / "gone.git")], cwd=origin.canonical)
+
+        result = runner.invoke(app, [*args, "-w", str(ws), "--json"])
+
+        payload = json.loads(result.output)
+        assert len(payload["fetch_warnings"]) == 1
+        assert "could not fetch 'origin'" in payload["fetch_warnings"][0]
+
+    def test_work_that_is_not_pushed_is_still_refused_while_offline(
+        self, stale_setup: Setup, tmp_path: Path
+    ) -> None:
+        origin, ws, _ = stale_setup
+        worktree = _add(ws)
+        _commit(worktree, "my work")
+        _git(["remote", "set-url", "origin", str(tmp_path / "gone.git")], cwd=origin.canonical)
+
+        result = runner.invoke(app, ["rm", "-w", str(ws), "--dry-run"])
+
+        assert result.exit_code != 0
+        assert "refused:" in result.output
+        assert "warning:" in result.output
+
+    def test_one_failing_remote_does_not_stop_the_others_from_being_fetched(
+        self, stale_setup: Setup, tmp_path: Path
+    ) -> None:
+        origin, ws, new_tip = stale_setup
+        _add(ws, "--no-fetch")
+        _git(["remote", "add", "dead", str(tmp_path / "gone.git")], cwd=origin.canonical)
+
+        result = runner.invoke(app, ["rm", "-w", str(ws), "--dry-run"])
+
+        assert "could not fetch 'dead'" in result.output
+        assert _git(["rev-parse", "origin/main"], cwd=origin.canonical).strip() == new_tip
 
     @pytest.mark.parametrize("args", [["rm"], ["drop", "api"]])
     def test_offline_works_with_no_fetch(
@@ -196,3 +240,20 @@ class TestRemoteThatPlainFetchAllSkips:
 
         assert result.exit_code != 0
         assert "1 unpushed commit" in result.output
+
+
+def test_a_set_reports_a_failed_fetch_once_per_clone(
+    stale_setup: Setup, isolated_home: Path, tmp_path: Path
+) -> None:
+    origin, _, _ = stale_setup
+    set_root = isolated_home / "set"
+    assert runner.invoke(app, ["init", "set", "--set", "-p", str(isolated_home)]).exit_code == 0
+    for member in ("m1", "m2"):
+        runner.invoke(app, ["init", member, "-p", str(set_root)])
+        runner.invoke(app, ["add", "kybernetix/api", "-w", str(set_root / member)])
+    _git(["remote", "set-url", "origin", str(tmp_path / "gone.git")], cwd=origin.canonical)
+
+    result = runner.invoke(app, ["rm", "-w", str(set_root), "--dry-run", "--json"])
+
+    assert result.exit_code == 0, result.output
+    assert len(json.loads(result.output)["fetch_warnings"]) == 1

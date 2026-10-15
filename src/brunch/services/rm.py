@@ -65,7 +65,8 @@ def rm_workspace(
 
     Unless ``fetch`` is False, every remote of each repo's clone is fetched and
     pruned first (also on a dry run), so the verdict rests on current refs; a
-    failed fetch raises ``FetchError`` before anything is touched.
+    failed fetch is only a warning in the outcome (``fetch_warnings``): the
+    verdict then rests on the remote refs from the last fetch.
     """
 
     if location.mode != "workspace":
@@ -77,8 +78,9 @@ def rm_workspace(
     _refuse_dangerous_root(location.root)
 
     manifest = load_workspace_manifest(location.manifest_path)
-    if fetch:
-        refresh_remotes(clones_to_refresh(manifest.repos, location.root, config))
+    fetch_warnings = (
+        refresh_remotes(clones_to_refresh(manifest.repos, location.root, config)) if fetch else []
+    )
     risks = [assess_repo(entry, location.root, config) for entry in manifest.repos]
     real_risks = [r for r in risks if r.is_at_risk]
 
@@ -86,6 +88,7 @@ def rm_workspace(
         return RmOutcome(
             workspace_name=manifest.name,
             workspace_path=location.root,
+            fetch_warnings=fetch_warnings,
             action="refused",
             risks=real_risks,
             forced=False,
@@ -109,6 +112,7 @@ def rm_workspace(
         return RmOutcome(
             workspace_name=manifest.name,
             workspace_path=location.root,
+            fetch_warnings=fetch_warnings,
             action=planned_outcome,
             risks=real_risks,
             repo_actions=planned_actions,
@@ -137,6 +141,7 @@ def rm_workspace(
     return RmOutcome(
         workspace_name=manifest.name,
         workspace_path=location.root,
+        fetch_warnings=fetch_warnings,
         action=outcome_action,
         risks=real_risks,
         repo_actions=actions,
