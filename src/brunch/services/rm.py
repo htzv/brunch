@@ -4,14 +4,15 @@ Implements the policy in ``docs/initial-design.md §7.5``.
 
 **Safety contract.** brunch will delete only:
 
-1. the workspace's marker file (``brunch.toml``);
+1. the workspace's marker file (``brunch.toml``), only when nothing else stays;
 2. directories the manifest declares as worktrees (via
    ``git worktree remove``, never ``shutil.rmtree``);
 3. the workspace directory itself, **only when it is empty** after (1)+(2).
 
 Anything else under the workspace root — sibling directories, dotfiles,
 nested git repos, symlinks, files brunch never put there — is preserved
-and the outcome is reported as ``partial``. With ``--force``, the entire
+and the outcome is reported as ``partial``; ``brunch.toml`` then stays, minus
+the repos whose worktrees were removed. With ``--force``, the entire
 workspace is archived first (so preserved content is captured in the
 tarball too), but the deletion contract still applies. If archive
 creation fails, the removal is aborted.
@@ -28,7 +29,7 @@ from pathlib import Path
 from brunch import git
 from brunch.archive import create_workspace_archive, default_archive_dir
 from brunch.errors import BrunchError, GitError, RepoSpecError, WorkspaceNotFoundError
-from brunch.manifest import load_workspace_manifest
+from brunch.manifest import load_workspace_manifest, write_workspace_manifest
 from brunch.models import (
     RepoEntry,
     RmActionType,
@@ -110,7 +111,7 @@ def rm_workspace(
     if force and not skip_archive:
         archive_path = _archive_or_raise(location.root, manifest.name)
 
-    actions, preserved, outcome_action = _remove_workspace_in_place(
+    actions, preserved, outcome_action, dropped = _remove_workspace_in_place(
         location.root,
         manifest,
         declared_paths,
@@ -126,6 +127,7 @@ def rm_workspace(
         risks=real_risks,
         repo_actions=actions,
         preserved=preserved,
+        manifest_entries_dropped=dropped,
         archive_path=archive_path,
         forced=force,
     )
@@ -169,12 +171,17 @@ def _remove_workspace_in_place(
     *,
     force: bool,
     manifest_filename: str,
-) -> tuple[list[RmRepoAction], list[Path], RmActionType]:
+) -> tuple[list[RmRepoAction], list[Path], RmActionType, list[str]]:
     """Run the per-repo removal + safety-aware dir cleanup.
 
     No archive is created here; callers that want one must arrange it
     *before* invoking this function so a failure to archive can short-
-    circuit the destruction. Returns (repo_actions, preserved, outcome).
+    circuit the destruction. Returns (repo_actions, preserved, outcome,
+    repos dropped from the manifest).
+
+    When the workspace directory stays, ``brunch.toml`` stays too, minus the
+    repos whose worktrees are gone, so ``status``, ``fsck`` and ``sync`` do not
+    see them as missing. Entries whose removal failed remain.
     """
 
     actions: list[RmRepoAction] = []
@@ -195,9 +202,11 @@ def _remove_workspace_in_place(
     # Apply the safety contract: only remove the marker + the workspace dir
     # if nothing unknown remains. Never `rmtree` the workspace.
     preserved = _enumerate_preserved(root, declared_paths)
+    failed = [a for a in actions if a.action == "error"]
+    if preserved or failed:
+        dropped = _drop_gone_entries(root / manifest_filename, manifest, actions)
+        return actions, preserved, "partial", dropped
     outcome: RmActionType
-    if preserved:
-        return actions, preserved, "partial"
 
     manifest_file = root / manifest_filename
     if manifest_file.is_file():
@@ -215,7 +224,19 @@ def _remove_workspace_in_place(
     else:
         outcome = "partial" if preserved else "removed"
 
-    return actions, preserved, outcome
+    return actions, preserved, outcome, []
+
+
+def _drop_gone_entries(
+    manifest_path: Path, manifest: WorkspaceManifest, actions: list[RmRepoAction]
+) -> list[str]:
+    """Rewrite ``manifest_path`` without the repos whose worktrees are gone; return them."""
+
+    failed = {a.repo for a in actions if a.action == "error"}
+    kept = [entry for entry in manifest.repos if entry.repo in failed]
+    dropped = [entry.repo for entry in manifest.repos if entry.repo not in failed]
+    write_workspace_manifest(manifest_path, manifest.model_copy(update={"repos": kept}))
+    return dropped
 
 
 # ---------------------------------------------------------------------------

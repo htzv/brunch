@@ -584,8 +584,9 @@ class RmOutcome(BaseModel):
     ``preserved`` lists direct children of the workspace root that were left
     intact because they were not declared in the manifest. When this list is
     non-empty the action is ``partial``: the workspace dir itself was not
-    removed, and ``brunch.toml`` was left in place so a future ``sync`` /
-    ``rm`` can re-engage.
+    removed, and ``brunch.toml`` was left in place without the repos whose
+    worktrees are gone (``manifest_entries_dropped``). Entries whose removal
+    failed stay, so a later ``rm`` can try again.
     """
 
     workspace_name: str
@@ -594,6 +595,7 @@ class RmOutcome(BaseModel):
     risks: list[RmRisk] = Field(default_factory=list)
     repo_actions: list[RmRepoAction] = Field(default_factory=list)
     preserved: list[Path] = Field(default_factory=list)
+    manifest_entries_dropped: list[str] = Field(default_factory=list)
     archive_path: Path | None = None
     forced: bool = False
     dry_run: bool = False
