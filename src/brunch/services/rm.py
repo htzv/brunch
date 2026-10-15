@@ -25,7 +25,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from brunch import git, git_remote
+from brunch import git
 from brunch.archive import create_workspace_archive, default_archive_dir
 from brunch.errors import BrunchError, GitError, RepoSpecError, WorkspaceNotFoundError
 from brunch.manifest import load_workspace_manifest
@@ -34,12 +34,12 @@ from brunch.models import (
     RmActionType,
     RmOutcome,
     RmRepoAction,
-    RmRisk,
     ToolConfig,
     WorkspaceLocation,
     WorkspaceManifest,
 )
 from brunch.paths import canonical_clone_path, parse_repo_spec
+from brunch.services.risk import assess_repo
 
 MANIFEST_FILENAME = "brunch.toml"
 # Reserved for future brunch-owned state (e.g. lockfiles in iteration 3+).
@@ -71,7 +71,7 @@ def rm_workspace(
     _refuse_dangerous_root(location.root)
 
     manifest = load_workspace_manifest(location.manifest_path)
-    risks = _assess_risks(manifest, location.root, config)
+    risks = [assess_repo(entry, location.root, config) for entry in manifest.repos]
     real_risks = [r for r in risks if r.is_at_risk]
 
     if real_risks and not force:
@@ -317,55 +317,6 @@ def _enumerate_preserved(workspace_root: Path, declared_paths: set[Path]) -> lis
         preserved.append(path)
 
     return preserved
-
-
-# ---------------------------------------------------------------------------
-# Risk assessment (unchanged from M4)
-
-
-def _assess_risks(
-    manifest: WorkspaceManifest, workspace_root: Path, config: ToolConfig
-) -> list[RmRisk]:
-    risks: list[RmRisk] = []
-    for entry in manifest.repos:
-        risks.append(_assess_one(entry, workspace_root, config))
-    return risks
-
-
-def _assess_one(entry: RepoEntry, workspace_root: Path, config: ToolConfig) -> RmRisk:
-    try:
-        spec = parse_repo_spec(entry.repo, default_forge=config.default_forge)
-    except RepoSpecError:
-        return RmRisk(repo=entry.repo, short_name=entry.repo)
-
-    worktree = workspace_root / spec.name
-    if not worktree.exists() or not git.is_git_repo(worktree):
-        return RmRisk(repo=entry.repo, short_name=spec.name)
-
-    try:
-        st = git.get_status(worktree)
-    except GitError:
-        return RmRisk(
-            repo=entry.repo,
-            short_name=spec.name,
-            has_uncommitted=True,
-        )
-
-    if st.upstream:
-        unpushed = st.ahead
-        no_upstream = False
-    else:
-        unpushed = git_remote.count_unpublished_commits(worktree, entry.base)
-        no_upstream = unpushed > 0
-
-    return RmRisk(
-        repo=entry.repo,
-        short_name=spec.name,
-        has_uncommitted=st.has_uncommitted,
-        has_untracked=st.has_untracked,
-        unpushed_commits=unpushed,
-        no_upstream=no_upstream,
-    )
 
 
 # ---------------------------------------------------------------------------
