@@ -7,7 +7,7 @@ resolution-markers = [
 ]
 
 [options]
-exclude-newer = "2026-10-12T22:28:04.389926092Z"
+exclude-newer = "2026-10-13T18:33:41.005277495Z"
 exclude-newer-span = "PT48H"
 
 [[package]]
@@ -92,7 +92,7 @@ wheels = [
 
 [[package]]
 name = "brunch"
-version = "0.1.0rc2"
+version = "0.1.0rc3"
 source = { editable = "." }
 dependencies = [
     { name = "platformdirs" },
