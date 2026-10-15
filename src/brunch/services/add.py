@@ -95,16 +95,7 @@ def add_repo(
                 ),
             )
 
-    # Like `git checkout -b`: never silently reuse a branch and ignore --base.
-    if git.branch_exists(canonical, effective_branch):
-        raise BranchConflictError(
-            f"branch {effective_branch!r} already exists in {canonical}, so --base {base!r} "
-            "would be ignored",
-            hint=(
-                "pick another name with --branch. If the branch is left over from a removed "
-                f"workspace, delete it first: git -C {canonical} branch -d {effective_branch}"
-            ),
-        )
+    _refuse_existing_branch(canonical, effective_branch, base)
 
     chosen_remote = _choose_remote(canonical, remote, fetch=fetch)
     will_fetch = fetch and chosen_remote is not None
@@ -112,6 +103,8 @@ def add_repo(
     if chosen_remote is not None and fetch:
         if not dry_run:
             git_remote.fetch_remote(canonical, chosen_remote)
+            # A fetch can create local branches (a mirror-style refspec), so look again.
+            _refuse_existing_branch(canonical, effective_branch, base)
         start_point = git_remote.resolve_start_point(canonical, chosen_remote, base)
 
     if dry_run:
@@ -139,6 +132,19 @@ def add_repo(
         start_point=start_point,
         fetched=will_fetch,
     )
+
+
+def _refuse_existing_branch(canonical: Path, branch: str, base: str) -> None:
+    """Like `git checkout -b`: never silently reuse a branch and ignore ``base``."""
+
+    if git.branch_exists(canonical, branch):
+        raise BranchConflictError(
+            f"branch {branch!r} already exists in {canonical}, so --base {base!r} would be ignored",
+            hint=(
+                "pick another name with --branch. If the branch is left over from a removed "
+                f"workspace, delete it first: git -C {canonical} branch -d {branch}"
+            ),
+        )
 
 
 def _choose_remote(canonical: Path, requested: str | None, *, fetch: bool) -> str | None:
