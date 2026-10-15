@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "brunch"
-version = "0.1.0rc2"
+version = "0.1.0rc3"
 description = "Mise en place for git worktree-based multi-repo task workspaces."
 readme = "README.md"
 requires-python = ">=3.11"
