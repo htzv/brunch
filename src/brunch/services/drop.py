@@ -9,9 +9,7 @@ shared canonical clone are left intact (the branch survives in the canonical).
 
 from __future__ import annotations
 
-from pathlib import Path
-
-from brunch import git, git_remote
+from brunch import git
 from brunch.errors import BrunchError, GitError, RepoSpecError, WorkspaceNotFoundError
 from brunch.manifest import load_workspace_manifest, write_workspace_manifest
 from brunch.models import (
@@ -23,6 +21,7 @@ from brunch.models import (
     WorkspaceManifest,
 )
 from brunch.paths import canonical_clone_path, parse_repo_spec
+from brunch.services.risk import assess_repo
 
 
 def drop_repo(
@@ -45,7 +44,7 @@ def drop_repo(
     entry, short = _resolve_entry(manifest, selector, config)
     worktree = location.root / short
 
-    risk = _assess(entry, location.root, config)
+    risk = assess_repo(entry, location.root, config)
 
     def _outcome(
         action: str, *, risk: RmRisk | None = None, message: str | None = None
@@ -130,37 +129,3 @@ def _drop_entry(manifest: WorkspaceManifest, entry: RepoEntry, location: Workspa
 
     manifest.repos = [r for r in manifest.repos if r.repo != entry.repo]
     write_workspace_manifest(location.manifest_path, manifest)
-
-
-def _assess(entry: RepoEntry, root: Path, config: ToolConfig) -> RmRisk:
-    """Per-repo risk assessment, mirroring ``br rm``'s contract."""
-
-    try:
-        spec = parse_repo_spec(entry.repo, default_forge=config.default_forge)
-    except RepoSpecError:
-        return RmRisk(repo=entry.repo, short_name=entry.repo)
-
-    worktree = root / spec.name
-    if not worktree.exists() or not git.is_git_repo(worktree):
-        return RmRisk(repo=entry.repo, short_name=spec.name)
-
-    try:
-        st = git.get_status(worktree)
-    except GitError:
-        return RmRisk(repo=entry.repo, short_name=spec.name, has_uncommitted=True)
-
-    if st.upstream:
-        unpushed = st.ahead
-        no_upstream = False
-    else:
-        unpushed = git_remote.count_unpublished_commits(worktree, entry.base)
-        no_upstream = unpushed > 0
-
-    return RmRisk(
-        repo=entry.repo,
-        short_name=spec.name,
-        has_uncommitted=st.has_uncommitted,
-        has_untracked=st.has_untracked,
-        unpushed_commits=unpushed,
-        no_upstream=no_upstream,
-    )
