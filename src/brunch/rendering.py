@@ -561,6 +561,11 @@ def render_rm_outcome(outcome: RmOutcome, *, console: Console | None = None) -> 
         for p in outcome.preserved:
             console.print(f"    - {p.name}")
 
+    if outcome.manifest_entries_dropped:
+        count = len(outcome.manifest_entries_dropped)
+        noun = "repo" if count == 1 else "repos"
+        console.print(f"\n  removed {count} {noun} from brunch.toml")
+
     if outcome.action == "removed":
         console.print(f"\n[green]removed workspace[/green] {outcome.workspace_path}")
     elif outcome.action == "would_remove":

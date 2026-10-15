@@ -39,9 +39,9 @@ def rm(
 
     Only the worktrees listed in `brunch.toml` are deleted, and the branches stay
     in the cloned repos. Any other file or folder in the workspace is kept. When
-    something is kept, `brunch.toml` stays too, so the directory remains a
-    workspace with no worktrees. When nothing else is left, the directory is
-    removed.
+    something is kept, `brunch.toml` stays too, without the repos whose
+    worktrees were removed, so the directory remains an empty workspace. When
+    nothing else is left, the directory is removed.
 
     At a set root it removes every workspace in the set, and refuses if any
     member refuses. Run it with `--dry-run` first.
