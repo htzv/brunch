@@ -23,7 +23,12 @@ def _add(ws: Path, *extra: str) -> Path:
 
 
 def _commit(repo: Path, message: str) -> None:
-    _git(["commit", "--allow-empty", "-m", message], cwd=repo)
+    """A commit that changes something: an empty one has nothing to lose."""
+
+    name = f"{message.replace(' ', '-')}.txt"
+    (repo / name).write_text(f"{message}\n", encoding="utf-8")
+    _git(["add", name], cwd=repo)
+    _git(["commit", "-m", message], cwd=repo)
 
 
 class TestCodeReviewFlow:

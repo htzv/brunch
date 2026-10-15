@@ -36,7 +36,9 @@ def rm(
     """Remove the workspace: delete its worktrees, then the workspace directory.
 
     Refuses, and removes nothing, if any worktree has uncommitted changes,
-    untracked files, or commits that are on no remote branch. To know that
+    untracked files, or commits that are on no remote branch (unless the base
+    branch already has their content after a rebase or squash merge, which the
+    output then says). To know that
     reliably it first fetches every remote of each repo and prunes the remote
     branches that were deleted there. If a fetch fails (offline), it warns and
     judges by the remote branches from the last fetch, as git does;

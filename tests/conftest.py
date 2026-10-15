@@ -181,6 +181,22 @@ class OriginRepo:
         _git(["push", "origin", "HEAD:main"], cwd=self._pusher)
         _git(["push", "origin", "--delete", branch], cwd=self._pusher)
 
+    def rebase_merge(self, branch: str) -> None:
+        """Rebase-merge ``branch`` into main on origin, then delete it.
+
+        Main gets an unrelated commit first, so the replayed commits have a new
+        parent and therefore new hashes, as a real rebase merge gives them.
+        """
+
+        _git(["fetch", "origin"], cwd=self._pusher)
+        _git(["checkout", "-B", "main", "origin/main"], cwd=self._pusher)
+        (self._pusher / "unrelated.txt").write_text("unrelated\n", encoding="utf-8")
+        _git(["add", "unrelated.txt"], cwd=self._pusher)
+        _git(["commit", "-m", "unrelated change on main"], cwd=self._pusher)
+        _git(["cherry-pick", f"origin/main..origin/{branch}"], cwd=self._pusher)
+        _git(["push", "origin", "HEAD:main"], cwd=self._pusher)
+        _git(["push", "origin", "--delete", branch], cwd=self._pusher)
+
     def publish_branch(self, branch: str, *, from_ref: str = "main") -> None:
         """Create ``branch`` on origin at ``from_ref``."""
 

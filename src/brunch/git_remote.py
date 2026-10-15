@@ -119,6 +119,24 @@ def count_commits_on_no_remote(path: Path, *also_not_in: str) -> int:
     return int(result.stdout.strip() or "0")
 
 
+def remote_copy_of_base(path: Path, base: str) -> str | None:
+    """The remote-tracking ref holding ``base``, or None if there is none.
+
+    ``base`` may already be one (``origin/main``). Otherwise it is looked up on
+    the remote chosen the same way as for a fetch; an unclear choice means None.
+    """
+
+    if rev_parse_verify(path, f"refs/remotes/{base}"):
+        return base
+    try:
+        remote = resolve_remote(path, None)
+    except GitError:
+        return None
+    if remote is not None and rev_parse_verify(path, f"refs/remotes/{remote}/{base}"):
+        return f"{remote}/{base}"
+    return None
+
+
 def resolve_start_point(path: Path, remote: str | None, base: str) -> str:
     """The ref a new branch should start from.
 

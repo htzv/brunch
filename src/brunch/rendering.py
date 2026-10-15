@@ -28,6 +28,7 @@ from brunch.models import (
     RebaseReport,
     RepoStatus,
     RmOutcome,
+    RmRisk,
     SetFetchReport,
     SetForeachReport,
     SetFsckReport,
@@ -299,6 +300,26 @@ def _render_fetch_warnings(warnings: list[str], console: Console) -> None:
     )
 
 
+_MERGE_WORDS = {"cherry": "rebase merge", "squash": "squash merge"}
+
+
+def _merged_note(risk: RmRisk) -> str:
+    """Why a repo with commits on no remote branch was still cleared."""
+
+    how = _MERGE_WORDS[risk.merged_upstream] if risk.merged_upstream else "merge"
+    noun = "commit" if risk.unpushed_commits == 1 else "commits"
+    return (
+        f"already merged upstream ({risk.merged_upstream}): {risk.unpushed_commits} {noun} on "
+        f"no remote branch, but the base branch has their content after a {how}"
+    )
+
+
+def _render_merged_repos(repos: list[RmRisk], console: Console) -> None:
+    for r in repos:
+        console.print(f"\n  [green]{r.short_name}[/green]  [dim]({r.repo})[/dim]")
+        console.print(f"           {_merged_note(r)}")
+
+
 def render_set_rm_outcome(outcome: SetRmOutcome, *, console: Console | None = None) -> None:
     console = console or Console()
     prefix = "[dim](dry-run)[/dim] " if outcome.dry_run else ""
@@ -553,6 +574,8 @@ def render_rm_outcome(outcome: RmOutcome, *, console: Console | None = None) -> 
             "to archive everything first."
         )
         return
+
+    _render_merged_repos(outcome.merged, console)
 
     if outcome.repo_actions:
         console.print()
@@ -844,3 +867,5 @@ def render_drop_outcome(outcome: DropOutcome, *, console: Console | None = None)
 
     verb = "[cyan]would drop[/cyan]" if outcome.action == "would_drop" else "[green]dropped[/green]"
     console.print(f"{verb} {outcome.short_name} {wt}")
+    if outcome.merged is not None:
+        console.print(f"        {_merged_note(outcome.merged)}")

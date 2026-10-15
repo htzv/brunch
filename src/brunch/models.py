@@ -537,8 +537,17 @@ class AdoptOutcome(BaseModel):
 # --- rm (M4) ---------------------------------------------------------------
 
 
+MergedSignal = Literal["cherry", "squash"]
+
+
 class RmRisk(BaseModel):
-    """A per-repo reason a workspace shouldn't be removed without --force."""
+    """A per-repo reason a workspace shouldn't be removed without --force.
+
+    ``unpushed_commits`` counts commits on no remote branch. When the base
+    branch already has their content (``merged_upstream``: ``cherry`` for a
+    rebase merge, ``squash`` for a squash merge) they are not a risk, and
+    ``no_upstream`` is not set. Uncommitted and untracked files always are.
+    """
 
     repo: str
     short_name: str
@@ -546,14 +555,14 @@ class RmRisk(BaseModel):
     has_untracked: bool = False
     unpushed_commits: int = 0
     no_upstream: bool = False
+    merged_upstream: MergedSignal | None = None
 
     @property
     def is_at_risk(self) -> bool:
         return (
             self.has_uncommitted
             or self.has_untracked
-            or self.unpushed_commits > 0
-            or self.no_upstream
+            or (self.merged_upstream is None and (self.unpushed_commits > 0 or self.no_upstream))
         )
 
 
@@ -597,6 +606,8 @@ class RmOutcome(BaseModel):
     repo_actions: list[RmRepoAction] = Field(default_factory=list)
     preserved: list[Path] = Field(default_factory=list)
     manifest_entries_dropped: list[str] = Field(default_factory=list)
+    merged: list[RmRisk] = Field(default_factory=list)
+    """Repos cleared because their commits are already merged upstream."""
     fetch_warnings: list[str] = Field(default_factory=list)
     """Fetches that failed; the verdict rests on the remote refs from the last fetch."""
     archive_path: Path | None = None
@@ -736,4 +747,6 @@ class DropOutcome(BaseModel):
     risk: RmRisk | None = None
     message: str | None = None
     dry_run: bool = False
+    merged: RmRisk | None = None
+    """Set when the repo was cleared because its commits are already merged upstream."""
     fetch_warnings: list[str] = Field(default_factory=list)

@@ -83,12 +83,14 @@ def rm_workspace(
     )
     risks = [assess_repo(entry, location.root, config) for entry in manifest.repos]
     real_risks = [r for r in risks if r.is_at_risk]
+    merged = [r for r in risks if r.merged_upstream and not r.is_at_risk]
 
     if real_risks and not force:
         return RmOutcome(
             workspace_name=manifest.name,
             workspace_path=location.root,
             fetch_warnings=fetch_warnings,
+            merged=merged,
             action="refused",
             risks=real_risks,
             forced=False,
@@ -113,6 +115,7 @@ def rm_workspace(
             workspace_name=manifest.name,
             workspace_path=location.root,
             fetch_warnings=fetch_warnings,
+            merged=merged,
             action=planned_outcome,
             risks=real_risks,
             repo_actions=planned_actions,
@@ -142,6 +145,7 @@ def rm_workspace(
         workspace_name=manifest.name,
         workspace_path=location.root,
         fetch_warnings=fetch_warnings,
+        merged=merged,
         action=outcome_action,
         risks=real_risks,
         repo_actions=actions,

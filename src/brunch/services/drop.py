@@ -52,7 +52,7 @@ def drop_repo(
     fetch_warnings = (
         refresh_remotes(clones_to_refresh([entry], location.root, config)) if fetch else []
     )
-    risk = assess_repo(entry, location.root, config)
+    assessed = assess_repo(entry, location.root, config)
 
     def _outcome(
         action: str, *, risk: RmRisk | None = None, message: str | None = None
@@ -68,16 +68,17 @@ def drop_repo(
             risk=risk,
             message=message,
             fetch_warnings=fetch_warnings,
+            merged=assessed if assessed.merged_upstream and not assessed.is_at_risk else None,
         )
 
     # Risk beats dry-run: a refusal is reported the same either way.
-    if risk.is_at_risk and not force:
-        return _outcome("refused", risk=risk, message="uncommitted/unpushed work — use --force")
+    if assessed.is_at_risk and not force:
+        return _outcome("refused", risk=assessed, message="uncommitted/unpushed work — use --force")
 
     if dry_run:
         return _outcome(
             "would_drop",
-            risk=risk if risk.is_at_risk else None,
+            risk=assessed if assessed.is_at_risk else None,
             message=f"would `git worktree remove` at {worktree}",
         )
 
