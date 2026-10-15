@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 
-from brunch import git
+from brunch import git, git_remote
 from brunch.errors import (
     BranchConflictError,
     BrunchError,
@@ -30,12 +30,18 @@ def add_repo(
     repo: str,
     branch: str | None = None,
     base: str = "main",
+    remote: str | None = None,
+    fetch: bool = True,
     dry_run: bool = False,
 ) -> AddOutcome:
     """Add a [[repo]] entry and create its worktree.
 
     ``branch`` defaults to the workspace name (matches the template-default
     convention). ``base`` defaults to ``"main"``. Both can be overridden.
+
+    Unless ``fetch`` is False, the chosen remote is fetched first and a new
+    branch starts from its copy of ``base``. A failed fetch, or an unusable
+    ``remote``, stops everything before anything is created.
     """
 
     if location.mode != "workspace":
@@ -98,6 +104,14 @@ def add_repo(
             ),
         )
 
+    chosen_remote = git_remote.resolve_remote(canonical, remote)
+    will_fetch = fetch and chosen_remote is not None
+    start_point = base
+    if chosen_remote is not None and fetch:
+        if not dry_run:
+            git_remote.fetch_remote(canonical, chosen_remote)
+        start_point = git_remote.resolve_start_point(canonical, chosen_remote, base)
+
     if dry_run:
         return AddOutcome(
             repo=repo,
@@ -105,9 +119,12 @@ def add_repo(
             base=base,
             worktree_path=worktree_path,
             dry_run=True,
+            remote=chosen_remote,
+            start_point=start_point,
+            fetched=will_fetch,
         )
 
-    git.add_worktree(canonical, worktree_path, branch=effective_branch, start_point=base)
+    git.add_worktree(canonical, worktree_path, branch=effective_branch, start_point=start_point)
     manifest.repos.append(RepoEntry(repo=repo, branch=effective_branch, base=base))
     write_workspace_manifest(location.manifest_path, manifest)
 
@@ -116,6 +133,9 @@ def add_repo(
         branch=effective_branch,
         base=base,
         worktree_path=worktree_path,
+        remote=chosen_remote,
+        start_point=start_point,
+        fetched=will_fetch,
     )
 
 
