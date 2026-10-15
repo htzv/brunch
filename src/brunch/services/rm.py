@@ -92,7 +92,13 @@ def rm_workspace(
     if dry_run:
         planned_actions = _plan_removals(manifest, location.root, config)
         planned_preserved = _enumerate_preserved(location.root, declared_paths)
-        planned_outcome: RmActionType = "partial" if planned_preserved else "would_remove"
+        planned_failed = any(a.action == "error" for a in planned_actions)
+        planned_outcome: RmActionType = (
+            "partial" if planned_preserved or planned_failed else "would_remove"
+        )
+        planned_dropped = (
+            _entries_gone(manifest, planned_actions) if planned_outcome == "partial" else []
+        )
         return RmOutcome(
             workspace_name=manifest.name,
             workspace_path=location.root,
@@ -100,6 +106,7 @@ def rm_workspace(
             risks=real_risks,
             repo_actions=planned_actions,
             preserved=planned_preserved,
+            manifest_entries_dropped=planned_dropped,
             forced=force,
             dry_run=True,
         )
@@ -232,11 +239,17 @@ def _drop_gone_entries(
 ) -> list[str]:
     """Rewrite ``manifest_path`` without the repos whose worktrees are gone; return them."""
 
-    failed = {a.repo for a in actions if a.action == "error"}
-    kept = [entry for entry in manifest.repos if entry.repo in failed]
-    dropped = [entry.repo for entry in manifest.repos if entry.repo not in failed]
+    dropped = _entries_gone(manifest, actions)
+    kept = [entry for entry in manifest.repos if entry.repo not in dropped]
     write_workspace_manifest(manifest_path, manifest.model_copy(update={"repos": kept}))
     return dropped
+
+
+def _entries_gone(manifest: WorkspaceManifest, actions: list[RmRepoAction]) -> list[str]:
+    """The repos whose worktree was, or would be, removed or found already absent."""
+
+    failed = {a.repo for a in actions if a.action == "error"}
+    return [entry.repo for entry in manifest.repos if entry.repo not in failed]
 
 
 # ---------------------------------------------------------------------------
@@ -372,6 +385,17 @@ def _plan_removals(
                 )
             )
             continue
+        canonical = canonical_clone_path(spec, root=config.root)
+        if not canonical.exists() or not git.is_git_repo(canonical):
+            actions.append(
+                RmRepoAction(
+                    repo=entry.repo,
+                    short_name=spec.name,
+                    action="error",
+                    message=_missing_canonical_message(canonical, worktree),
+                )
+            )
+            continue
         actions.append(
             RmRepoAction(
                 repo=entry.repo,
@@ -381,6 +405,14 @@ def _plan_removals(
             )
         )
     return actions
+
+
+def _missing_canonical_message(canonical: Path, worktree: Path) -> str:
+    return (
+        f"canonical clone missing at {canonical}; cannot use "
+        "`git worktree remove`. Re-clone the canonical or "
+        f"remove {worktree} manually."
+    )
 
 
 def _remove_one(
@@ -426,11 +458,7 @@ def _remove_one(
                 repo=entry.repo,
                 short_name=spec.name,
                 action="error",
-                message=(
-                    f"canonical clone missing at {canonical}; cannot use "
-                    "`git worktree remove`. Re-clone the canonical or "
-                    f"remove {worktree} manually."
-                ),
+                message=_missing_canonical_message(canonical, worktree),
             ),
             None,
         )
