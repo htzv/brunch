@@ -40,7 +40,7 @@ from brunch.models import (
     WorkspaceManifest,
 )
 from brunch.paths import canonical_clone_path, parse_repo_spec
-from brunch.services.risk import assess_repo
+from brunch.services.risk import assess_repo, clones_to_refresh, refresh_remotes
 
 MANIFEST_FILENAME = "brunch.toml"
 # Reserved for future brunch-owned state (e.g. lockfiles in iteration 3+).
@@ -55,12 +55,17 @@ def rm_workspace(
     force: bool = False,
     dry_run: bool = False,
     skip_archive: bool = False,
+    fetch: bool = True,
 ) -> RmOutcome:
     """Remove ``location``'s workspace, archiving first when ``force`` is set.
 
     ``skip_archive`` is an internal escape hatch used by :func:`rm_set` to
     avoid double-archiving each member when the whole set has already been
     captured in one tarball. Not meant for direct CLI use.
+
+    Unless ``fetch`` is False, every remote of each repo's clone is fetched and
+    pruned first (also on a dry run), so the verdict rests on current refs; a
+    failed fetch raises ``FetchError`` before anything is touched.
     """
 
     if location.mode != "workspace":
@@ -72,6 +77,8 @@ def rm_workspace(
     _refuse_dangerous_root(location.root)
 
     manifest = load_workspace_manifest(location.manifest_path)
+    if fetch:
+        refresh_remotes(clones_to_refresh(manifest.repos, location.root, config))
     risks = [assess_repo(entry, location.root, config) for entry in manifest.repos]
     real_risks = [r for r in risks if r.is_at_risk]
 

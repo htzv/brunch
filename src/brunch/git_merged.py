@@ -1,34 +1,17 @@
 """Has this branch's work already reached another ref?
 
-Four independent signals, each safe to be wrong in one direction only: a
-``False`` means "not proven merged", never "proven unmerged". A squash merge
-leaves no commit in common, so only the tree comparison can see it.
+Two signals, each safe to be wrong in one direction only: a ``False`` means
+"not proven merged", never "proven unmerged". A squash merge leaves no commit in
+common, so only the tree comparison can see it.
 """
 
 from __future__ import annotations
 
 from pathlib import Path
 
-from brunch.errors import GitError
 from brunch.git import rev_parse_verify, run_git
 
-GIT_EXIT_NO = 1
 CHERRY_UNMERGED_MARK = "+"
-GONE_TRACK = "[gone]"
-
-
-def is_ancestor(path: Path, ancestor: str, descendant: str = "HEAD") -> bool:
-    """True if every commit of ``ancestor`` is reachable from ``descendant``.
-
-    Catches fast-forward and merge-commit merges.
-    """
-
-    result = run_git(["merge-base", "--is-ancestor", ancestor, descendant], cwd=path, check=False)
-    if result.returncode == 0:
-        return True
-    if result.returncode == GIT_EXIT_NO:
-        return False
-    raise GitError(f"cannot compare {ancestor!r} with {descendant!r}: {result.stderr.strip()}")
 
 
 def cherry_unmerged(path: Path, upstream: str, head: str = "HEAD") -> int:
@@ -41,22 +24,6 @@ def cherry_unmerged(path: Path, upstream: str, head: str = "HEAD") -> int:
 
     result = run_git(["cherry", upstream, head], cwd=path)
     return sum(1 for line in result.stdout.splitlines() if line.startswith(CHERRY_UNMERGED_MARK))
-
-
-def upstream_gone(path: Path, branch: str) -> bool:
-    """True if ``branch`` tracks a remote branch that no longer exists.
-
-    Only visible after a fetch with pruning: until then the remote-tracking ref
-    is still there. A gone upstream also hides ``ahead``: git leaves
-    ``branch.ab`` out of ``status``, so unpushed commits read as zero.
-    """
-
-    result = run_git(
-        ["for-each-ref", "--format=%(upstream:track)", f"refs/heads/{branch}"],
-        cwd=path,
-        check=False,
-    )
-    return result.returncode == 0 and result.stdout.strip() == GONE_TRACK
 
 
 def tree_contained_in(path: Path, ref: str, head: str = "HEAD") -> bool:

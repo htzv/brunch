@@ -21,7 +21,7 @@ from brunch.models import (
     WorkspaceManifest,
 )
 from brunch.paths import canonical_clone_path, parse_repo_spec
-from brunch.services.risk import assess_repo
+from brunch.services.risk import assess_repo, clones_to_refresh, refresh_remotes
 
 
 def drop_repo(
@@ -31,8 +31,12 @@ def drop_repo(
     *,
     force: bool = False,
     dry_run: bool = False,
+    fetch: bool = True,
 ) -> DropOutcome:
-    """Remove one repo's worktree + manifest entry. Refuses risky removals sans ``force``."""
+    """Remove one repo's worktree + manifest entry. Refuses risky removals sans ``force``.
+
+    Unless ``fetch`` is False, the repo's remotes are fetched and pruned first.
+    """
 
     if location.mode != "workspace":
         raise WorkspaceNotFoundError(
@@ -44,6 +48,8 @@ def drop_repo(
     entry, short = _resolve_entry(manifest, selector, config)
     worktree = location.root / short
 
+    if fetch:
+        refresh_remotes(clones_to_refresh([entry], location.root, config))
     risk = assess_repo(entry, location.root, config)
 
     def _outcome(
