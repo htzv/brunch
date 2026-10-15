@@ -382,6 +382,18 @@ def render_add_outcome(outcome: AddOutcome, *, console: Console | None = None) -
     verb = "would add" if outcome.dry_run else "[green]added[/green]"
     console.print(f"{prefix}{verb} {outcome.repo} on {outcome.branch!r} (base {outcome.base!r})")
     console.print(f"        at {outcome.worktree_path}")
+    console.print(f"        {_describe_start(outcome)}")
+
+
+def _describe_start(outcome: AddOutcome) -> str:
+    """One line on where the branch starts and whether the remote was fetched."""
+
+    if outcome.remote is None:
+        return f"no remote configured, so it starts from the local {outcome.start_point!r}"
+    if not outcome.fetched:
+        return f"not fetched (--no-fetch), so it starts from the local {outcome.start_point!r}"
+    fetch = "would fetch" if outcome.dry_run else "fetched"
+    return f"{fetch} {outcome.remote!r}; starts from {outcome.start_point!r}"
 
 
 def _render_action_list(

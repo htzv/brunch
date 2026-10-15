@@ -257,6 +257,12 @@ class AddOutcome(BaseModel):
     base: str
     worktree_path: Path
     dry_run: bool = False
+    remote: str | None = None
+    """The remote chosen for the fetch and the start point; None if the repo has no remotes."""
+    start_point: str
+    """The ref a new branch starts from, such as ``origin/main`` or the local ``main``."""
+    fetched: bool = False
+    """The remote was fetched first (with ``dry_run``: would be)."""
 
 
 class InitOutcome(BaseModel):

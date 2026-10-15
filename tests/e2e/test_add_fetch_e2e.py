@@ -1,0 +1,163 @@
+"""`br add` fetches the remote and starts new branches from its current tip."""
+
+from __future__ import annotations
+
+import json
+import shutil
+import subprocess
+from collections.abc import Callable
+from pathlib import Path
+
+import pytest
+from typer.testing import CliRunner
+
+from brunch.cli import app
+from tests.conftest import OriginRepo, _git
+
+runner = CliRunner()
+MakeOrigin = Callable[..., OriginRepo]
+
+
+@pytest.fixture
+def stale_setup(
+    tmp_path: Path, isolated_home: Path, make_origin: MakeOrigin
+) -> tuple[OriginRepo, Path, str]:
+    """A canonical whose local main is behind origin, and an empty workspace.
+
+    Returns the origin, the workspace path, and origin's new tip.
+    """
+
+    origin = make_origin("api")
+    new_tip = origin.advance()
+    canonical_root = tmp_path / "canonical-root"
+    target = canonical_root / "github.com" / "kybernetix" / "api"
+    target.parent.mkdir(parents=True)
+    shutil.move(str(origin.canonical), str(target))
+    origin.canonical = target
+    config_dir = isolated_home / ".config" / "brunch"
+    config_dir.mkdir(parents=True)
+    (config_dir / "config.toml").write_text(f'root = "{canonical_root}"\n', encoding="utf-8")
+    result = runner.invoke(app, ["init", "task-1", "-p", str(isolated_home)])
+    assert result.exit_code == 0, result.output
+    return origin, isolated_home / "task-1", new_tip
+
+
+def _head(path: Path) -> str:
+    return _git(["rev-parse", "HEAD"], cwd=path).strip()
+
+
+def test_branch_starts_at_the_remote_tip_not_the_stale_local_main(
+    stale_setup: tuple[OriginRepo, Path, str],
+) -> None:
+    origin, ws, new_tip = stale_setup
+    stale_main = _git(["rev-parse", "main"], cwd=origin.canonical).strip()
+    assert stale_main != new_tip
+
+    result = runner.invoke(app, ["add", "kybernetix/api", "-w", str(ws)])
+
+    assert result.exit_code == 0, result.output
+    assert _head(ws / "api") == new_tip
+    assert "fetched 'origin'; starts from 'origin/main'" in result.output
+    assert _git(["rev-parse", "main"], cwd=origin.canonical).strip() == stale_main
+
+
+def test_new_branch_does_not_track_main(stale_setup: tuple[OriginRepo, Path, str]) -> None:
+    _, ws, _ = stale_setup
+    runner.invoke(app, ["add", "kybernetix/api", "-w", str(ws)])
+    tracking = subprocess.run(
+        ["git", "config", "--get-regexp", r"^branch\.task-1\."],
+        cwd=ws / "api",
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert tracking.stdout == ""
+
+
+def test_json_reports_remote_start_point_and_fetch(
+    stale_setup: tuple[OriginRepo, Path, str],
+) -> None:
+    _, ws, _ = stale_setup
+    result = runner.invoke(app, ["add", "kybernetix/api", "-w", str(ws), "--json"])
+    payload = json.loads(result.output)
+    assert payload["remote"] == "origin"
+    assert payload["start_point"] == "origin/main"
+    assert payload["fetched"] is True
+    assert payload["base"] == "main"
+
+
+def test_no_fetch_starts_from_the_local_base_and_says_so(
+    stale_setup: tuple[OriginRepo, Path, str],
+) -> None:
+    origin, ws, new_tip = stale_setup
+    stale_main = _git(["rev-parse", "main"], cwd=origin.canonical).strip()
+
+    result = runner.invoke(app, ["add", "kybernetix/api", "-w", str(ws), "--no-fetch"])
+
+    assert result.exit_code == 0, result.output
+    assert _head(ws / "api") == stale_main != new_tip
+    assert "not fetched (--no-fetch)" in result.output
+    assert "local 'main'" in result.output
+
+
+def test_unreachable_remote_fails_and_creates_nothing(
+    stale_setup: tuple[OriginRepo, Path, str], tmp_path: Path
+) -> None:
+    origin, ws, _ = stale_setup
+    _git(["remote", "set-url", "origin", str(tmp_path / "gone.git")], cwd=origin.canonical)
+    manifest_before = (ws / "brunch.toml").read_text(encoding="utf-8")
+
+    result = runner.invoke(app, ["add", "kybernetix/api", "-w", str(ws)])
+
+    assert result.exit_code == 7
+    assert "could not fetch 'origin'" in result.output
+    assert "--no-fetch" in result.output
+    assert not (ws / "api").exists()
+    assert (ws / "brunch.toml").read_text(encoding="utf-8") == manifest_before
+
+
+def test_dry_run_does_not_fetch(stale_setup: tuple[OriginRepo, Path, str]) -> None:
+    origin, ws, new_tip = stale_setup
+    result = runner.invoke(app, ["add", "kybernetix/api", "-w", str(ws), "--dry-run"])
+    assert result.exit_code == 0, result.output
+    assert "would fetch 'origin'" in result.output
+    assert not (ws / "api").exists()
+    remote_tip = _git(["rev-parse", "origin/main"], cwd=origin.canonical).strip()
+    assert remote_tip != new_tip
+
+
+def test_two_remotes_without_origin_fail_until_one_is_named(
+    stale_setup: tuple[OriginRepo, Path, str],
+) -> None:
+    origin, ws, new_tip = stale_setup
+    _git(["remote", "rename", "origin", "company"], cwd=origin.canonical)
+    _git(["remote", "add", "mirror", str(origin.bare)], cwd=origin.canonical)
+
+    ambiguous = runner.invoke(app, ["add", "kybernetix/api", "-w", str(ws)])
+    assert ambiguous.exit_code == 7
+    assert "company, mirror" in ambiguous.output
+    assert "--remote" in ambiguous.output
+    assert not (ws / "api").exists()
+
+    named = runner.invoke(app, ["add", "kybernetix/api", "-w", str(ws), "-r", "company"])
+    assert named.exit_code == 0, named.output
+    assert _head(ws / "api") == new_tip
+    assert "fetched 'company'; starts from 'company/main'" in named.output
+
+
+def test_repo_without_a_remote_skips_the_fetch_and_says_so(
+    tmp_path: Path, isolated_home: Path, make_canonical: Callable[..., Path]
+) -> None:
+    root = tmp_path / "canonical-root"
+    target = root / "github.com" / "kybernetix" / "api"
+    target.parent.mkdir(parents=True)
+    shutil.move(str(make_canonical("api")), str(target))
+    config_dir = isolated_home / ".config" / "brunch"
+    config_dir.mkdir(parents=True)
+    (config_dir / "config.toml").write_text(f'root = "{root}"\n', encoding="utf-8")
+    runner.invoke(app, ["init", "task-1", "-p", str(isolated_home)])
+
+    result = runner.invoke(app, ["add", "kybernetix/api", "-w", str(isolated_home / "task-1")])
+
+    assert result.exit_code == 0, result.output
+    assert "no remote configured" in result.output
