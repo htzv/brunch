@@ -101,6 +101,41 @@ class TestEntriesLeaveTheManifestWithTheirWorktrees:
         assert [r.repo for r in remaining] == ["kybernetix/web"]
         assert outcome.manifest_entries_dropped == ["kybernetix/api"]
 
+    def test_dry_run_previews_the_entries_the_real_run_drops(
+        self,
+        tmp_path: Path,
+        make_canonical: Callable[..., Path],
+        make_workspace: Callable[..., Path],
+        worktree_factory: Callable[..., None],
+    ) -> None:
+        ws, loc, config, canonicals = _setup(
+            tmp_path, make_canonical, make_workspace, worktree_factory
+        )
+        (ws / "_docs").mkdir()
+        shutil.rmtree(canonicals["web"])
+
+        preview = rm_workspace(loc, config, dry_run=True)
+        real = rm_workspace(loc, config)
+
+        assert (
+            preview.manifest_entries_dropped == real.manifest_entries_dropped == ["kybernetix/api"]
+        )
+        assert preview.action == real.action == "partial"
+
+    def test_dry_run_expects_a_partial_removal_when_one_will_fail(
+        self,
+        tmp_path: Path,
+        make_canonical: Callable[..., Path],
+        make_workspace: Callable[..., Path],
+        worktree_factory: Callable[..., None],
+    ) -> None:
+        _, loc, config, canonicals = _setup(
+            tmp_path, make_canonical, make_workspace, worktree_factory
+        )
+        shutil.rmtree(canonicals["web"])
+
+        assert rm_workspace(loc, config, dry_run=True).action == "partial"
+
     def test_dry_run_changes_nothing(
         self,
         tmp_path: Path,
