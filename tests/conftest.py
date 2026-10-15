@@ -197,6 +197,27 @@ class OriginRepo:
         _git(["push", "origin", "HEAD:main"], cwd=self._pusher)
         _git(["push", "origin", "--delete", branch], cwd=self._pusher)
 
+    def merge_commit(self, branch: str) -> None:
+        """Merge ``branch`` into main on origin with a merge commit, then delete it."""
+
+        _git(["fetch", "origin"], cwd=self._pusher)
+        _git(["checkout", "-B", "main", "origin/main"], cwd=self._pusher)
+        _git(["merge", "--no-ff", "-m", f"merge {branch}", f"origin/{branch}"], cwd=self._pusher)
+        _git(["push", "origin", "HEAD:main"], cwd=self._pusher)
+        _git(["push", "origin", "--delete", branch], cwd=self._pusher)
+
+    def revert_main(self, count: int = 1) -> None:
+        """Revert the last ``count`` commits (or the last merge commit) on origin's main."""
+
+        _git(["fetch", "origin"], cwd=self._pusher)
+        _git(["checkout", "-B", "main", "origin/main"], cwd=self._pusher)
+        is_merge = len(_git(["rev-list", "--parents", "-n1", "HEAD"], cwd=self._pusher).split()) > 2
+        if is_merge:
+            _git(["revert", "--no-edit", "-m", "1", "HEAD"], cwd=self._pusher)
+        else:
+            _git(["revert", "--no-edit", f"HEAD~{count}..HEAD"], cwd=self._pusher)
+        _git(["push", "origin", "HEAD:main"], cwd=self._pusher)
+
     def publish_branch(self, branch: str, *, from_ref: str = "main") -> None:
         """Create ``branch`` on origin at ``from_ref``."""
 

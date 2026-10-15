@@ -224,3 +224,39 @@ def test_an_unpushed_commit_that_changes_nothing_is_not_a_risk(stale_setup: Setu
 
     assert code == 0, output
     assert json.loads(output)["merged"][0]["unpushed_commits"] == 1
+
+
+class TestMergedThenRevertedOnMain:
+    """The work is in the remote's history, which is what git means by pushed.
+
+    A merge commit followed by a revert already counts as pushed (the commits are
+    reachable from main), so a patch that main has, then reverted, counts the
+    same way; requiring the content to still be in main would treat the two
+    differently, and would refuse a rebase merge once main edits the same lines.
+    """
+
+    def test_a_rebase_merge_that_main_later_reverted_is_still_recognised(
+        self, stale_setup: Setup
+    ) -> None:
+        origin, ws, _ = stale_setup
+        _work_on_branch(ws, commits=1)
+        origin.rebase_merge(BRANCH)
+        origin.revert_main()
+
+        code, output = _rm_dry_run(ws, "--json")
+
+        assert code == 0, output
+        assert json.loads(output)["merged"][0]["merged_upstream"] == "cherry"
+
+    def test_a_merge_commit_that_main_later_reverted_counts_as_pushed(
+        self, stale_setup: Setup
+    ) -> None:
+        origin, ws, _ = stale_setup
+        _work_on_branch(ws, commits=1)
+        origin.merge_commit(BRANCH)
+        origin.revert_main()
+
+        code, output = _rm_dry_run(ws, "--json")
+
+        assert code == 0, output
+        assert json.loads(output)["risks"] == []

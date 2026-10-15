@@ -84,7 +84,9 @@ def _merged_into_base(worktree: Path, base: str) -> MergedSignal | None:
     """How the work in ``worktree`` already reached the remote copy of ``base``, if it did.
 
     Neither check proves the work is NOT merged when it says no; the caller
-    then keeps treating the commits as unpushed.
+    then keeps treating the commits as unpushed. A yes means the work is in the
+    remote's history, as with a commit reachable from it: if main later reverted
+    it, it still counts (the patch is preserved there).
     """
 
     upstream = git_remote.remote_copy_of_base(worktree, base)
