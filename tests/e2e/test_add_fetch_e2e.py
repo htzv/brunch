@@ -160,4 +160,31 @@ def test_repo_without_a_remote_skips_the_fetch_and_says_so(
     result = runner.invoke(app, ["add", "kybernetix/api", "-w", str(isolated_home / "task-1")])
 
     assert result.exit_code == 0, result.output
-    assert "no remote configured" in result.output
+    assert "no remote used" in result.output
+
+
+def test_no_fetch_does_not_need_an_unambiguous_remote(
+    stale_setup: tuple[OriginRepo, Path, str],
+) -> None:
+    """Without a fetch nothing depends on the remote, so several remotes are fine."""
+
+    origin, ws, _ = stale_setup
+    _git(["remote", "rename", "origin", "company"], cwd=origin.canonical)
+    _git(["remote", "add", "mirror", str(origin.bare)], cwd=origin.canonical)
+
+    result = runner.invoke(app, ["add", "kybernetix/api", "-w", str(ws), "--no-fetch"])
+
+    assert result.exit_code == 0, result.output
+    assert "no remote used" in result.output
+    assert (ws / "api" / ".git").exists()
+
+
+def test_no_fetch_still_rejects_a_remote_that_does_not_exist(
+    stale_setup: tuple[OriginRepo, Path, str],
+) -> None:
+    _, ws, _ = stale_setup
+    result = runner.invoke(
+        app, ["add", "kybernetix/api", "-w", str(ws), "--no-fetch", "-r", "nope"]
+    )
+    assert result.exit_code == 7
+    assert "no remote named 'nope'" in result.output
