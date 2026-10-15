@@ -32,7 +32,8 @@ def drop(
 
     The rest of the workspace and the cloned repo are left alone, and the branch
     stays in the clone. It refuses if the worktree has uncommitted changes,
-    untracked files, or commits that are on no remote branch; it first fetches
+    untracked files, or commits that are on no remote branch (unless the base
+    branch already has their content after a rebase or squash merge); it first fetches
     the repo's remotes and prunes deleted remote branches. If a fetch fails
     (offline), it warns and judges by the remote branches from the last fetch;
     `--no-fetch` skips the attempt. `--force` overrides the refusal.

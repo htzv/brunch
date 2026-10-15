@@ -213,7 +213,9 @@ class TestCleanupAfterAddingOnAStaleMain:
         self, stale_setup: tuple[OriginRepo, Path, str]
     ) -> None:
         ws = self._added(stale_setup)
-        _git(["commit", "--allow-empty", "-m", "my work"], cwd=ws / "api")
+        (ws / "api" / "mine.txt").write_text("my work\n", encoding="utf-8")
+        _git(["add", "mine.txt"], cwd=ws / "api")
+        _git(["commit", "-m", "my work"], cwd=ws / "api")
         result = runner.invoke(app, ["rm", "-w", str(ws), "--dry-run"])
         assert result.exit_code != 0
         assert "1 local-only commit" in result.output
@@ -222,7 +224,9 @@ class TestCleanupAfterAddingOnAStaleMain:
         self, stale_setup: tuple[OriginRepo, Path, str]
     ) -> None:
         ws = self._added(stale_setup)
-        _git(["commit", "--allow-empty", "-m", "my work"], cwd=ws / "api")
+        (ws / "api" / "mine.txt").write_text("my work\n", encoding="utf-8")
+        _git(["add", "mine.txt"], cwd=ws / "api")
+        _git(["commit", "-m", "my work"], cwd=ws / "api")
         result = runner.invoke(app, ["drop", "api", "-w", str(ws), "--dry-run"])
         assert result.exit_code != 0
         assert "1 unpushed" in result.output

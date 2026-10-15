@@ -3,8 +3,9 @@
 A worktree is at risk when removing it could lose work: uncommitted changes,
 untracked files, or commits that exist nowhere else. "Nowhere else" is git's own
 answer: commits that no remote-tracking branch contains (and that the local base
-branch does not contain). Run :func:`refresh_remotes` first so those branches are
-current.
+branch does not contain), unless the remote copy of the base already has their
+content (a rebase or squash merge). Run :func:`refresh_remotes` first so those
+branches are current.
 """
 
 from __future__ import annotations
@@ -12,9 +13,9 @@ from __future__ import annotations
 from collections.abc import Iterable
 from pathlib import Path
 
-from brunch import git, git_remote
+from brunch import git, git_merged, git_remote
 from brunch.errors import GitError, RepoSpecError
-from brunch.models import RepoEntry, RmRisk, ToolConfig
+from brunch.models import MergedSignal, RepoEntry, RmRisk, ToolConfig
 from brunch.paths import canonical_clone_path, parse_repo_spec
 
 
@@ -67,12 +68,30 @@ def assess_repo(entry: RepoEntry, workspace_root: Path, config: ToolConfig) -> R
         return RmRisk(repo=entry.repo, short_name=spec.name, has_uncommitted=True)
 
     unpushed = git_remote.count_commits_on_no_remote(worktree, entry.base)
-    no_upstream = unpushed > 0 and not status.upstream
+    merged = _merged_into_base(worktree, entry.base) if unpushed > 0 else None
     return RmRisk(
         repo=entry.repo,
         short_name=spec.name,
         has_uncommitted=status.has_uncommitted,
         has_untracked=status.has_untracked,
         unpushed_commits=unpushed,
-        no_upstream=no_upstream,
+        no_upstream=unpushed > 0 and not status.upstream and merged is None,
+        merged_upstream=merged,
     )
+
+
+def _merged_into_base(worktree: Path, base: str) -> MergedSignal | None:
+    """How the work in ``worktree`` already reached the remote copy of ``base``, if it did.
+
+    Neither check proves the work is NOT merged when it says no; the caller
+    then keeps treating the commits as unpushed.
+    """
+
+    upstream = git_remote.remote_copy_of_base(worktree, base)
+    if upstream is None:
+        return None
+    if git_merged.cherry_unmerged(worktree, upstream) == 0:
+        return "cherry"
+    if git_merged.tree_contained_in(worktree, upstream):
+        return "squash"
+    return None
