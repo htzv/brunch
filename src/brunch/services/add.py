@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
+from pathlib import Path
 
 from brunch import git, git_remote
 from brunch.errors import (
@@ -10,6 +11,7 @@ from brunch.errors import (
     BrunchError,
     DuplicateRepoError,
     GitError,
+    RemoteError,
     WorkspaceNotFoundError,
 )
 from brunch.manifest import load_workspace_manifest, write_workspace_manifest
@@ -104,7 +106,7 @@ def add_repo(
             ),
         )
 
-    chosen_remote = git_remote.resolve_remote(canonical, remote)
+    chosen_remote = _choose_remote(canonical, remote, fetch=fetch)
     will_fetch = fetch and chosen_remote is not None
     start_point = base
     if chosen_remote is not None and fetch:
@@ -137,6 +139,21 @@ def add_repo(
         start_point=start_point,
         fetched=will_fetch,
     )
+
+
+def _choose_remote(canonical: Path, requested: str | None, *, fetch: bool) -> str | None:
+    """The remote to fetch and branch from.
+
+    With ``fetch`` off, nothing depends on the remote, so an ambiguous choice is
+    not an error; the remote is then only reported when it can be determined.
+    """
+
+    try:
+        return git_remote.resolve_remote(canonical, requested)
+    except RemoteError:
+        if fetch or requested is not None:
+            raise
+        return None
 
 
 def _existing_short_names(manifest: WorkspaceManifest, config: ToolConfig) -> Iterator[str]:

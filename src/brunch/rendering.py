@@ -389,7 +389,7 @@ def _describe_start(outcome: AddOutcome) -> str:
     """One line on where the branch starts and whether the remote was fetched."""
 
     if outcome.remote is None:
-        return f"no remote configured, so it starts from the local {outcome.start_point!r}"
+        return f"no remote used, so it starts from the local {outcome.start_point!r}"
     if not outcome.fetched:
         return f"not fetched (--no-fetch), so it starts from the local {outcome.start_point!r}"
     fetch = "would fetch" if outcome.dry_run else "fetched"
