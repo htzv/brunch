@@ -188,3 +188,22 @@ def test_no_fetch_still_rejects_a_remote_that_does_not_exist(
     )
     assert result.exit_code == 7
     assert "no remote named 'nope'" in result.output
+
+
+def test_branch_that_the_fetch_itself_creates_is_refused(
+    stale_setup: tuple[OriginRepo, Path, str],
+) -> None:
+    """A mirror-style refspec turns the fetch into a way to create local branches."""
+
+    origin, ws, _ = stale_setup
+    origin.publish_branch("task-1")
+    _git(["checkout", "-b", "scratch"], cwd=origin.canonical)
+    _git(["config", "remote.origin.fetch", "+refs/heads/*:refs/heads/*"], cwd=origin.canonical)
+    manifest_before = (ws / "brunch.toml").read_text(encoding="utf-8")
+
+    result = runner.invoke(app, ["add", "kybernetix/api", "-w", str(ws)])
+
+    assert result.exit_code == 10
+    assert "'task-1' already exists" in result.output
+    assert not (ws / "api").exists()
+    assert (ws / "brunch.toml").read_text(encoding="utf-8") == manifest_before
