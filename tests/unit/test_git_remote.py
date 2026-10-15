@@ -158,3 +158,57 @@ class TestResolveStartPoint:
         repo = make_canonical()
         _git(["remote", "add", "origin", str(repo)], cwd=repo)
         assert git_remote.resolve_start_point(repo, "origin", "main") == "main"
+
+
+class TestCountUnpublishedCommits:
+    def _branch_from_stale_main(self, origin: OriginRepo, tmp_path: Path) -> Path:
+        origin.advance()
+        git_remote.fetch_remote(origin.canonical, "origin")
+        target = tmp_path / "wt"
+        _git(
+            ["worktree", "add", "--no-track", "-b", "feat", str(target), "origin/main"],
+            cwd=origin.canonical,
+        )
+        return target
+
+    def test_commits_the_fetch_brought_in_are_not_counted(
+        self, make_origin: MakeOrigin, tmp_path: Path
+    ) -> None:
+        origin = make_origin()
+        wt = self._branch_from_stale_main(origin, tmp_path)
+        assert git_remote.count_unpublished_commits(wt, "main") == 0
+
+    def test_own_commits_are_counted(self, make_origin: MakeOrigin, tmp_path: Path) -> None:
+        origin = make_origin()
+        wt = self._branch_from_stale_main(origin, tmp_path)
+        _git(["commit", "--allow-empty", "-m", "mine"], cwd=wt)
+        assert git_remote.count_unpublished_commits(wt, "main") == 1
+
+    def test_commits_only_in_the_local_base_are_not_counted(
+        self, make_origin: MakeOrigin, tmp_path: Path
+    ) -> None:
+        origin = make_origin()
+        _git(["commit", "--allow-empty", "-m", "local main only"], cwd=origin.canonical)
+        wt = tmp_path / "wt"
+        _git(["worktree", "add", "-b", "feat", str(wt), "main"], cwd=origin.canonical)
+        assert git_remote.count_unpublished_commits(wt, "main") == 0
+
+    def test_ambiguous_remotes_fall_back_to_the_local_base(
+        self, make_origin: MakeOrigin, tmp_path: Path
+    ) -> None:
+        origin = make_origin()
+        _git(["remote", "rename", "origin", "a"], cwd=origin.canonical)
+        _git(["remote", "add", "b", str(origin.bare)], cwd=origin.canonical)
+        wt = tmp_path / "wt"
+        _git(["worktree", "add", "-b", "feat", str(wt), "main"], cwd=origin.canonical)
+        _git(["commit", "--allow-empty", "-m", "mine"], cwd=wt)
+        assert git_remote.count_unpublished_commits(wt, "main") == 1
+
+    def test_repo_without_remotes_compares_against_the_local_base(
+        self, make_canonical: Callable[..., Path], tmp_path: Path
+    ) -> None:
+        repo = make_canonical()
+        wt = tmp_path / "wt"
+        _git(["worktree", "add", "-b", "feat", str(wt), "main"], cwd=repo)
+        _git(["commit", "--allow-empty", "-m", "mine"], cwd=wt)
+        assert git_remote.count_unpublished_commits(wt, "main") == 1

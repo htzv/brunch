@@ -10,7 +10,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from brunch.errors import FetchError, GitError, RemoteError
-from brunch.git import rev_parse_verify, run_git
+from brunch.git import count_commits_ahead_of, rev_parse_verify, run_git
 
 CONVENTIONAL_REMOTE = "origin"
 FALLBACK_DEFAULT_BRANCH = "main"
@@ -80,6 +80,25 @@ def default_branch(path: Path, remote: str) -> str:
     if result.returncode == 0 and target.startswith(prefix):
         return target.removeprefix(prefix)
     return FALLBACK_DEFAULT_BRANCH
+
+
+def count_unpublished_commits(path: Path, base: str) -> int:
+    """Commits in HEAD that are in neither the local ``base`` nor its remote copy.
+
+    A branch started from ``origin/main`` is ahead of a stale local ``main`` by
+    the commits the fetch brought in, none of which are the user's work, so the
+    remote copy counts as published too. Never fails on an unusable remote: it
+    then compares against the local base alone.
+    """
+
+    try:
+        remote = resolve_remote(path, None)
+    except GitError:
+        remote = None
+    published = [base]
+    if remote is not None and rev_parse_verify(path, f"refs/remotes/{remote}/{base}"):
+        published.append(f"{remote}/{base}")
+    return count_commits_ahead_of(path, *published)
 
 
 def resolve_start_point(path: Path, remote: str | None, base: str) -> str:

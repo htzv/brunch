@@ -207,3 +207,47 @@ def test_branch_that_the_fetch_itself_creates_is_refused(
     assert "'task-1' already exists" in result.output
     assert not (ws / "api").exists()
     assert (ws / "brunch.toml").read_text(encoding="utf-8") == manifest_before
+
+
+class TestCleanupAfterAddingOnAStaleMain:
+    """The commits a fetch brought in are not the user's work, but real work still counts."""
+
+    def _added(self, stale_setup: tuple[OriginRepo, Path, str]) -> Path:
+        _, ws, _ = stale_setup
+        result = runner.invoke(app, ["add", "kybernetix/api", "-w", str(ws)])
+        assert result.exit_code == 0, result.output
+        return ws
+
+    def test_rm_of_an_untouched_worktree_is_not_refused(
+        self, stale_setup: tuple[OriginRepo, Path, str]
+    ) -> None:
+        ws = self._added(stale_setup)
+        result = runner.invoke(app, ["rm", "-w", str(ws), "--dry-run"])
+        assert result.exit_code == 0, result.output
+        assert "refused" not in result.output
+
+    def test_drop_of_an_untouched_worktree_is_not_refused(
+        self, stale_setup: tuple[OriginRepo, Path, str]
+    ) -> None:
+        ws = self._added(stale_setup)
+        result = runner.invoke(app, ["drop", "api", "-w", str(ws), "--dry-run"])
+        assert result.exit_code == 0, result.output
+        assert "refused" not in result.output
+
+    def test_rm_still_refuses_a_real_unpublished_commit(
+        self, stale_setup: tuple[OriginRepo, Path, str]
+    ) -> None:
+        ws = self._added(stale_setup)
+        _git(["commit", "--allow-empty", "-m", "my work"], cwd=ws / "api")
+        result = runner.invoke(app, ["rm", "-w", str(ws), "--dry-run"])
+        assert result.exit_code != 0
+        assert "1 local-only commit" in result.output
+
+    def test_drop_still_refuses_a_real_unpublished_commit(
+        self, stale_setup: tuple[OriginRepo, Path, str]
+    ) -> None:
+        ws = self._added(stale_setup)
+        _git(["commit", "--allow-empty", "-m", "my work"], cwd=ws / "api")
+        result = runner.invoke(app, ["drop", "api", "-w", str(ws), "--dry-run"])
+        assert result.exit_code != 0
+        assert "1 unpushed" in result.output

@@ -25,7 +25,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from brunch import git
+from brunch import git, git_remote
 from brunch.archive import create_workspace_archive, default_archive_dir
 from brunch.errors import BrunchError, GitError, RepoSpecError, WorkspaceNotFoundError
 from brunch.manifest import load_workspace_manifest
@@ -355,7 +355,7 @@ def _assess_one(entry: RepoEntry, workspace_root: Path, config: ToolConfig) -> R
         unpushed = st.ahead
         no_upstream = False
     else:
-        unpushed = git.count_commits_ahead_of(worktree, entry.base)
+        unpushed = git_remote.count_unpublished_commits(worktree, entry.base)
         no_upstream = unpushed > 0
 
     return RmRisk(

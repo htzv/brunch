@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from brunch import git
+from brunch import git, git_remote
 from brunch.errors import BrunchError, GitError, RepoSpecError, WorkspaceNotFoundError
 from brunch.manifest import load_workspace_manifest, write_workspace_manifest
 from brunch.models import (
@@ -153,7 +153,7 @@ def _assess(entry: RepoEntry, root: Path, config: ToolConfig) -> RmRisk:
         unpushed = st.ahead
         no_upstream = False
     else:
-        unpushed = git.count_commits_ahead_of(worktree, entry.base)
+        unpushed = git_remote.count_unpublished_commits(worktree, entry.base)
         no_upstream = unpushed > 0
 
     return RmRisk(
