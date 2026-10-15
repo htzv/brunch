@@ -39,7 +39,9 @@ class TestCodeReviewFlow:
         origin.publish_branch("pr-branch")
         origin.advance("pr-branch")
         origin.advance("pr-branch")
-        worktree = _add(ws, "--branch", "pr-branch")
+        # --no-fetch: the branch starts untracked from main, as it did before `br add`
+        # learned to take the remote branch; then pull it by name, as a reviewer would.
+        worktree = _add(ws, "--branch", "pr-branch", "--no-fetch")
         _git(["pull", "origin", "pr-branch"], cwd=worktree)
         return ws
 

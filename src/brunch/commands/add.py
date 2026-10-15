@@ -19,7 +19,9 @@ def add(
     branch: str | None = typer.Option(
         None, "--branch", help="Branch to check out (default: workspace name)."
     ),
-    base: str = typer.Option("main", "--base", help="Branch to start from when creating."),
+    base: str | None = typer.Option(
+        None, "--base", help="Branch to start a new branch from (default: main)."
+    ),
     remote: str | None = typer.Option(
         None, "--remote", "-r", help="Remote to fetch and branch from (default: see below)."
     ),
@@ -43,11 +45,14 @@ def add(
     clones. The worktree is created at `./<repo-name>` on `--branch` (default: the
     workspace name).
 
-    First it fetches the repo's remote, then starts the new branch from the
-    remote's copy of `--base` (default `main`), so the branch begins at the
-    current tip rather than at a stale local `main`. The new branch does not track
-    the remote branch. A base other than the remote's default branch starts from
-    the local branch of that name when there is one. If the fetch fails, nothing is
+    First it fetches the repo's remote (and prunes branches deleted there). If the
+    remote already has a branch of that name, as when you review someone's pull
+    request, the worktree starts from it and tracks it, as `git switch` does;
+    `--base` then has no meaning, so giving it is an error. Otherwise the new
+    branch starts from the remote's copy of `--base` (default `main`), so it begins
+    at the current tip rather than at a stale local `main`, and it does not track
+    that branch. A base other than the remote's default branch starts from the
+    local branch of that name when there is one. If the fetch fails, nothing is
     created; `--no-fetch` works offline by starting from the local base instead.
 
     The remote is `--remote`, else git's `checkout.defaultRemote`, else the only
