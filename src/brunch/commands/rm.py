@@ -38,8 +38,9 @@ def rm(
     Refuses, and removes nothing, if any worktree has uncommitted changes,
     untracked files, or commits that are on no remote branch. To know that
     reliably it first fetches every remote of each repo and prunes the remote
-    branches that were deleted there (`--no-fetch` skips this, for working
-    offline). `--force` removes anyway,
+    branches that were deleted there. If a fetch fails (offline), it warns and
+    judges by the remote branches from the last fetch, as git does;
+    `--no-fetch` skips the attempt. `--force` removes anyway,
     after saving a tarball of the whole workspace in the `archives` folder of
     brunch's data directory.
 

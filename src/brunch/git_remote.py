@@ -86,15 +86,20 @@ def default_branch(path: Path, remote: str) -> str:
     return FALLBACK_DEFAULT_BRANCH
 
 
-def fetch_every_remote(path: Path) -> None:
-    """Fetch and prune each configured remote by name; raise ``FetchError`` on the first failure.
+def fetch_every_remote(path: Path) -> list[FetchError]:
+    """Fetch and prune each configured remote by name; return the fetches that failed.
 
     Not ``git fetch --all``: that silently skips a remote configured with
     ``skipDefaultUpdate``, whose stale refs would then still count as pushed.
     """
 
+    failures: list[FetchError] = []
     for remote in remotes(path):
-        fetch_remote(path, remote, prune=True)
+        try:
+            fetch_remote(path, remote, prune=True)
+        except FetchError as e:
+            failures.append(e)
+    return failures
 
 
 def count_commits_on_no_remote(path: Path, *also_not_in: str) -> int:

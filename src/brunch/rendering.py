@@ -286,11 +286,25 @@ def render_set_foreach_report(report: SetForeachReport, *, console: Console | No
         render_foreach_report(member, console=console)
 
 
+def _render_fetch_warnings(warnings: list[str], console: Console) -> None:
+    """Say which fetches failed, and what the verdict then rests on."""
+
+    if not warnings:
+        return
+    for warning in warnings:
+        console.print(f"[yellow]warning:[/yellow] {escape(warning)}")
+    console.print(
+        "         judged by the remote branches from the last fetch; "
+        "[dim]--no-fetch skips the attempt[/dim]\n"
+    )
+
+
 def render_set_rm_outcome(outcome: SetRmOutcome, *, console: Console | None = None) -> None:
     console = console or Console()
     prefix = "[dim](dry-run)[/dim] " if outcome.dry_run else ""
     console.print(f"{prefix}[bold]set rm[/bold]  {outcome.set_name}")
     console.print(f"        [bold]path[/bold]  {outcome.set_path}")
+    _render_fetch_warnings(outcome.fetch_warnings, console)
 
     if outcome.action == "refused":
         console.print("\n[red]refused[/red]: one or more member workspaces would refuse:\n")
@@ -517,6 +531,7 @@ def render_rm_outcome(outcome: RmOutcome, *, console: Console | None = None) -> 
     prefix = "[dim](dry-run)[/dim] " if outcome.dry_run else ""
     console.print(f"{prefix}[bold]rm[/bold]  {outcome.workspace_name}")
     console.print(f"    [bold]path[/bold]  {outcome.workspace_path}")
+    _render_fetch_warnings(outcome.fetch_warnings, console)
 
     if outcome.action == "refused":
         console.print("\n[red]refused[/red]: workspace has at-risk repos:\n")
@@ -803,6 +818,7 @@ def render_drop_outcome(outcome: DropOutcome, *, console: Console | None = None)
 
     console = console or Console()
     wt = f"[dim]{escape(str(outcome.worktree_path))}[/dim]"
+    _render_fetch_warnings(outcome.fetch_warnings, console)
 
     if outcome.action == "refused":
         console.print(f"[red]refused[/red] to drop {outcome.short_name} — {outcome.message}")

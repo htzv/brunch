@@ -35,7 +35,8 @@ def drop_repo(
 ) -> DropOutcome:
     """Remove one repo's worktree + manifest entry. Refuses risky removals sans ``force``.
 
-    Unless ``fetch`` is False, the repo's remotes are fetched and pruned first.
+    Unless ``fetch`` is False, the repo's remotes are fetched and pruned first; a
+    failed fetch is only a warning in the outcome.
     """
 
     if location.mode != "workspace":
@@ -48,8 +49,9 @@ def drop_repo(
     entry, short = _resolve_entry(manifest, selector, config)
     worktree = location.root / short
 
-    if fetch:
-        refresh_remotes(clones_to_refresh([entry], location.root, config))
+    fetch_warnings = (
+        refresh_remotes(clones_to_refresh([entry], location.root, config)) if fetch else []
+    )
     risk = assess_repo(entry, location.root, config)
 
     def _outcome(
@@ -65,6 +67,7 @@ def drop_repo(
             dry_run=dry_run,
             risk=risk,
             message=message,
+            fetch_warnings=fetch_warnings,
         )
 
     # Risk beats dry-run: a refusal is reported the same either way.

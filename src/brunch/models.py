@@ -489,6 +489,7 @@ class SetRmOutcome(BaseModel):
     action: SetRmActionType
     members: list[RmOutcome] = Field(default_factory=list)
     preserved: list[Path] = Field(default_factory=list)
+    fetch_warnings: list[str] = Field(default_factory=list)
     archive_path: Path | None = None
     forced: bool = False
     dry_run: bool = False
@@ -596,6 +597,8 @@ class RmOutcome(BaseModel):
     repo_actions: list[RmRepoAction] = Field(default_factory=list)
     preserved: list[Path] = Field(default_factory=list)
     manifest_entries_dropped: list[str] = Field(default_factory=list)
+    fetch_warnings: list[str] = Field(default_factory=list)
+    """Fetches that failed; the verdict rests on the remote refs from the last fetch."""
     archive_path: Path | None = None
     forced: bool = False
     dry_run: bool = False
@@ -733,3 +736,4 @@ class DropOutcome(BaseModel):
     risk: RmRisk | None = None
     message: str | None = None
     dry_run: bool = False
+    fetch_warnings: list[str] = Field(default_factory=list)
