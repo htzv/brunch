@@ -162,6 +162,25 @@ class OriginRepo:
         _git(["push", "origin", f"HEAD:{branch}"], cwd=self._pusher)
         return _git(["rev-parse", "HEAD"], cwd=self._pusher).strip()
 
+    def edit_main(self, filename: str, content: str) -> None:
+        """Commit ``content`` to ``filename`` on origin's main."""
+
+        _git(["fetch", "origin"], cwd=self._pusher)
+        _git(["checkout", "-B", "main", "origin/main"], cwd=self._pusher)
+        (self._pusher / filename).write_text(content, encoding="utf-8")
+        _git(["commit", "-am", f"edit {filename}"], cwd=self._pusher)
+        _git(["push", "origin", "HEAD:main"], cwd=self._pusher)
+
+    def squash_merge(self, branch: str) -> None:
+        """Squash-merge ``branch`` into main on origin, then delete ``branch`` there."""
+
+        _git(["fetch", "origin"], cwd=self._pusher)
+        _git(["checkout", "-B", "main", "origin/main"], cwd=self._pusher)
+        _git(["merge", "--squash", f"origin/{branch}"], cwd=self._pusher)
+        _git(["commit", "-m", f"squash {branch}"], cwd=self._pusher)
+        _git(["push", "origin", "HEAD:main"], cwd=self._pusher)
+        _git(["push", "origin", "--delete", branch], cwd=self._pusher)
+
     def publish_branch(self, branch: str, *, from_ref: str = "main") -> None:
         """Create ``branch`` on origin at ``from_ref``."""
 
