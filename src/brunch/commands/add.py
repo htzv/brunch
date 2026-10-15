@@ -37,11 +37,13 @@ def add(
     clones. The worktree is created at `./<repo-name>` on `--branch` (default: the
     workspace name). A new branch starts from the local `--base` branch (default
     `main`). Brunch does not fetch first, so that branch may be behind the remote.
-    If the branch already exists in the clone, it is checked out as it is and
-    `--base` is ignored.
 
-    It refuses if the branch is already checked out in another worktree. It does
-    not work at a set root. REPO is `org/repo` or `forge/org/repo`.
+    It refuses if the branch already exists in the clone (as `git checkout -b`
+    does), including when it is checked out in another worktree. A branch left
+    over from a removed workspace is the usual cause: pick another `--branch`, or
+    delete the old one. It does not work at a set root.
+
+    REPO is `org/repo` or `forge/org/repo`.
 
     Example:
 

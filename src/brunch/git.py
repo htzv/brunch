@@ -111,25 +111,23 @@ def branch_exists(canonical: Path, branch: str) -> bool:
     return result.returncode == 0
 
 
-def add_worktree(canonical: Path, target: Path, *, branch: str, start_point: str) -> bool:
+def add_worktree(canonical: Path, target: Path, *, branch: str, start_point: str) -> None:
     """Run ``git worktree add`` to materialise a worktree at ``target``.
 
     If ``branch`` already exists in ``canonical``, it is checked out as-is and
     ``start_point`` plays no part. Otherwise, it is created from ``start_point``
     without tracking it, so a later ``git push`` can never target the base
     branch. Either way, ``target`` ends up on ``branch``.
-
-    Returns True when the branch was created, False when it already existed.
     """
 
     target.parent.mkdir(parents=True, exist_ok=True)
     if branch_exists(canonical, branch):
         run_git(["worktree", "add", str(target), branch], cwd=canonical)
-        return False
-    run_git(
-        ["worktree", "add", "--no-track", "-b", branch, str(target), start_point], cwd=canonical
-    )
-    return True
+    else:
+        run_git(
+            ["worktree", "add", "--no-track", "-b", branch, str(target), start_point],
+            cwd=canonical,
+        )
 
 
 def remove_worktree(canonical: Path, target: Path, *, force: bool = False) -> None:

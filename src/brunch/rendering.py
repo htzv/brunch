@@ -382,11 +382,6 @@ def render_add_outcome(outcome: AddOutcome, *, console: Console | None = None) -
     verb = "would add" if outcome.dry_run else "[green]added[/green]"
     console.print(f"{prefix}{verb} {outcome.repo} on {outcome.branch!r} (base {outcome.base!r})")
     console.print(f"        at {outcome.worktree_path}")
-    if outcome.branch_existed:
-        console.print(
-            f"        [yellow]note:[/yellow] branch {outcome.branch!r} already existed, "
-            f"so it was checked out as it is; base {outcome.base!r} is only recorded"
-        )
 
 
 def _render_action_list(

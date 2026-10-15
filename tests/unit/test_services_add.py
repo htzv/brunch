@@ -198,15 +198,15 @@ class TestAddRepoErrors:
             add_repo(loc, ToolConfig(), repo="kybernetix/api")
 
 
-class TestAddWhenBranchAlreadyExists:
-    """The base cannot decide where an existing branch starts, so say so."""
+class TestAddRefusesAnExistingBranch:
+    """Like `git checkout -b`: an existing branch is an error, not a silent reuse."""
 
-    def _setup(
+    def _existing_branch(
         self,
         tmp_path: Path,
         make_canonical: Callable[..., Path],
         make_workspace: Callable[..., Path],
-    ) -> tuple[WorkspaceLocation, ToolConfig]:
+    ) -> tuple[WorkspaceLocation, ToolConfig, Path]:
         canonical_root = tmp_path / "canonical-root"
         canonical = _install_canonical(make_canonical, canonical_root, name="api")
         subprocess.run(
@@ -215,33 +215,53 @@ class TestAddWhenBranchAlreadyExists:
             check=True,
             capture_output=True,
         )
-        return _make_workspace(make_workspace("billing-flow")), _config(canonical_root)
+        loc = _make_workspace(make_workspace("billing-flow"))
+        return loc, _config(canonical_root), canonical
 
-    def test_outcome_says_the_branch_existed(
+    def test_refuses_and_says_how_to_recover(
         self,
         tmp_path: Path,
         make_canonical: Callable[..., Path],
         make_workspace: Callable[..., Path],
     ) -> None:
-        loc, config = self._setup(tmp_path, make_canonical, make_workspace)
-        assert add_repo(loc, config, repo="kybernetix/api").branch_existed is True
+        loc, config, canonical = self._existing_branch(tmp_path, make_canonical, make_workspace)
+        with pytest.raises(BranchConflictError) as caught:
+            add_repo(loc, config, repo="kybernetix/api", base="develop")
+        assert "'billing-flow' already exists" in str(caught.value)
+        assert "--base 'develop' would be ignored" in str(caught.value)
+        assert caught.value.hint is not None
+        assert "--branch" in caught.value.hint
+        assert f"git -C {canonical} branch -d billing-flow" in caught.value.hint
 
-    def test_dry_run_predicts_it(
+    def test_changes_nothing_when_it_refuses(
         self,
         tmp_path: Path,
         make_canonical: Callable[..., Path],
         make_workspace: Callable[..., Path],
     ) -> None:
-        loc, config = self._setup(tmp_path, make_canonical, make_workspace)
-        assert add_repo(loc, config, repo="kybernetix/api", dry_run=True).branch_existed is True
+        loc, config, _ = self._existing_branch(tmp_path, make_canonical, make_workspace)
+        before = loc.manifest_path.read_text(encoding="utf-8")
+        with pytest.raises(BranchConflictError):
+            add_repo(loc, config, repo="kybernetix/api")
+        assert loc.manifest_path.read_text(encoding="utf-8") == before
+        assert not (loc.root / "api").exists()
 
-    def test_a_new_branch_is_not_reported_as_existing(
+    def test_dry_run_refuses_too(
         self,
         tmp_path: Path,
         make_canonical: Callable[..., Path],
         make_workspace: Callable[..., Path],
     ) -> None:
-        canonical_root = tmp_path / "canonical-root"
-        _install_canonical(make_canonical, canonical_root, name="api")
-        loc = _make_workspace(make_workspace("fresh"))
-        assert add_repo(loc, _config(canonical_root), repo="kybernetix/api").branch_existed is False
+        loc, config, _ = self._existing_branch(tmp_path, make_canonical, make_workspace)
+        with pytest.raises(BranchConflictError):
+            add_repo(loc, config, repo="kybernetix/api", dry_run=True)
+
+    def test_another_branch_name_works(
+        self,
+        tmp_path: Path,
+        make_canonical: Callable[..., Path],
+        make_workspace: Callable[..., Path],
+    ) -> None:
+        loc, config, _ = self._existing_branch(tmp_path, make_canonical, make_workspace)
+        outcome = add_repo(loc, config, repo="kybernetix/api", branch="billing-flow-2")
+        assert outcome.branch == "billing-flow-2"

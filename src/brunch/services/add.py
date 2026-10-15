@@ -87,6 +87,17 @@ def add_repo(
                 ),
             )
 
+    # Like `git checkout -b`: never silently reuse a branch and ignore --base.
+    if git.branch_exists(canonical, effective_branch):
+        raise BranchConflictError(
+            f"branch {effective_branch!r} already exists in {canonical}, so --base {base!r} "
+            "would be ignored",
+            hint=(
+                "pick another name with --branch. If the branch is left over from a removed "
+                f"workspace, delete it first: git -C {canonical} branch -d {effective_branch}"
+            ),
+        )
+
     if dry_run:
         return AddOutcome(
             repo=repo,
@@ -94,12 +105,9 @@ def add_repo(
             base=base,
             worktree_path=worktree_path,
             dry_run=True,
-            branch_existed=git.branch_exists(canonical, effective_branch),
         )
 
-    created_branch = git.add_worktree(
-        canonical, worktree_path, branch=effective_branch, start_point=base
-    )
+    git.add_worktree(canonical, worktree_path, branch=effective_branch, start_point=base)
     manifest.repos.append(RepoEntry(repo=repo, branch=effective_branch, base=base))
     write_workspace_manifest(location.manifest_path, manifest)
 
@@ -108,7 +116,6 @@ def add_repo(
         branch=effective_branch,
         base=base,
         worktree_path=worktree_path,
-        branch_existed=not created_branch,
     )
 
 
