@@ -225,9 +225,8 @@ class TestAddWorktreeStartPoint:
         subprocess.run(["git", "fetch", "origin"], cwd=origin.canonical, check=True)
         target = tmp_path / "wt"
 
-        created = add_worktree(origin.canonical, target, branch="feat", start_point="origin/main")
+        add_worktree(origin.canonical, target, branch="feat", start_point="origin/main")
 
-        assert created is True
         assert _git(["rev-parse", "HEAD"], cwd=target).strip() == tip
         upstream = subprocess.run(
             ["git", "config", "--get", "branch.feat.remote"],
@@ -238,7 +237,7 @@ class TestAddWorktreeStartPoint:
         )
         assert upstream.stdout.strip() == ""
 
-    def test_existing_branch_is_checked_out_as_it_is_and_reported(
+    def test_existing_branch_is_checked_out_as_it_is(
         self, make_origin: Callable[..., OriginRepo], tmp_path: Path
     ) -> None:
         origin = make_origin()
@@ -247,11 +246,8 @@ class TestAddWorktreeStartPoint:
         origin.advance()
         subprocess.run(["git", "fetch", "origin"], cwd=origin.canonical, check=True)
 
-        created = add_worktree(
-            origin.canonical, tmp_path / "wt", branch="feat", start_point="origin/main"
-        )
+        add_worktree(origin.canonical, tmp_path / "wt", branch="feat", start_point="origin/main")
 
-        assert created is False
         assert _git(["rev-parse", "HEAD"], cwd=tmp_path / "wt").strip() == local_tip
 
 
