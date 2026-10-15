@@ -29,11 +29,17 @@ def rm(
         False, "--dry-run", help="Show what would happen without doing it."
     ),
     json_output: bool = typer.Option(False, "--json", help="Emit JSON instead of text."),
+    no_fetch: bool = typer.Option(
+        False, "--no-fetch", help="Do not fetch first; judge by the remote branches already here."
+    ),
 ) -> None:
     """Remove the workspace: delete its worktrees, then the workspace directory.
 
     Refuses, and removes nothing, if any worktree has uncommitted changes,
-    untracked files, or commits that are not pushed. `--force` removes anyway,
+    untracked files, or commits that are on no remote branch. To know that
+    reliably it first fetches every remote of each repo and prunes the remote
+    branches that were deleted there (`--no-fetch` skips this, for working
+    offline). `--force` removes anyway,
     after saving a tarball of the whole workspace in the `archives` folder of
     brunch's data directory.
 
@@ -57,7 +63,7 @@ def rm(
     cfg = load_config()
 
     if location.mode == "set":
-        set_outcome = rm_set(location, cfg, force=force, dry_run=dry_run)
+        set_outcome = rm_set(location, cfg, force=force, dry_run=dry_run, fetch=not no_fetch)
         if json_output:
             typer.echo(set_outcome.model_dump_json(indent=2))
         else:
@@ -66,7 +72,7 @@ def rm(
             raise typer.Exit(code=1)
         return
 
-    outcome = rm_workspace(location, cfg, force=force, dry_run=dry_run)
+    outcome = rm_workspace(location, cfg, force=force, dry_run=dry_run, fetch=not no_fetch)
     if json_output:
         typer.echo(outcome.model_dump_json(indent=2))
     else:

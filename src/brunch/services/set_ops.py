@@ -11,7 +11,7 @@ import os
 from pathlib import Path
 
 from brunch.errors import WorkspaceNotFoundError
-from brunch.manifest import load_set_manifest
+from brunch.manifest import load_set_manifest, load_workspace_manifest
 from brunch.models import (
     SetFetchReport,
     SetForeachReport,
@@ -30,6 +30,7 @@ from brunch.services.foreach import foreach_workspace
 from brunch.services.fsck import fsck_workspace
 from brunch.services.pull import pull_workspace
 from brunch.services.rebase import rebase_workspace
+from brunch.services.risk import clones_to_refresh, refresh_remotes
 from brunch.services.rm import (
     _refuse_dangerous_root,
     archive_or_raise,
@@ -172,6 +173,7 @@ def rm_set(
     *,
     force: bool = False,
     dry_run: bool = False,
+    fetch: bool = True,
 ) -> SetRmOutcome:
     """Remove a whole workspace set, archiving once and respecting the
     deletion safety contract at the set root.
@@ -186,8 +188,18 @@ def rm_set(
     set_manifest = load_set_manifest(location.manifest_path)
     members = discover_set_members(location.root)
 
+    # Fetch once for the whole set; the member calls below then skip their own.
+    if fetch:
+        refresh_remotes(
+            clone
+            for member in members
+            for clone in clones_to_refresh(
+                load_workspace_manifest(member.manifest_path).repos, member.root, config
+            )
+        )
+
     # Phase 1: dry-run each member without forcing — surfaces refusals.
-    previews = [rm_workspace(m, config, force=False, dry_run=True) for m in members]
+    previews = [rm_workspace(m, config, force=False, dry_run=True, fetch=False) for m in members]
     any_refused = any(p.action == "refused" for p in previews)
 
     if any_refused and not force:
@@ -203,7 +215,7 @@ def rm_set(
     if dry_run:
         # Re-plan with the user's actual force value so member outcomes reflect
         # what `rm --force` (vs default rm) would do.
-        planned = [rm_workspace(m, config, force=force, dry_run=True) for m in members]
+        planned = [rm_workspace(m, config, force=force, dry_run=True, fetch=False) for m in members]
         member_paths_fully_removed = {
             m.root.resolve(strict=False)
             for m, o in zip(members, planned, strict=False)
@@ -238,6 +250,7 @@ def rm_set(
             force=force,
             dry_run=False,
             skip_archive=True,
+            fetch=False,
         )
         for m in members
     ]

@@ -24,12 +24,17 @@ def drop(
         None, "-w", "--workspace", help="Operate on the workspace at this path (default: cwd)."
     ),
     json_output: bool = typer.Option(False, "--json", help="Emit JSON instead of a summary."),
+    no_fetch: bool = typer.Option(
+        False, "--no-fetch", help="Do not fetch first; judge by the remote branches already here."
+    ),
 ) -> None:
     """Remove one repo's worktree and its `brunch.toml` entry.
 
     The rest of the workspace and the cloned repo are left alone, and the branch
     stays in the clone. It refuses if the worktree has uncommitted changes,
-    untracked files, or commits that are not pushed. `--force` overrides that.
+    untracked files, or commits that are on no remote branch; it first fetches
+    the repo's remotes and prunes deleted remote branches (`--no-fetch` skips
+    that). `--force` overrides the refusal.
     REPO is the short name or the `org/repo` form.
 
     Example:
@@ -40,7 +45,9 @@ def drop(
     """
 
     location = discover_workspace(workspace or Path.cwd())
-    outcome = drop_repo(location, load_config(), repo, force=force, dry_run=dry_run)
+    outcome = drop_repo(
+        location, load_config(), repo, force=force, dry_run=dry_run, fetch=not no_fetch
+    )
     if json_output:
         typer.echo(outcome.model_dump_json(indent=2))
     else:

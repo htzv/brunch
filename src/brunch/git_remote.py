@@ -10,12 +10,12 @@ from __future__ import annotations
 from pathlib import Path
 
 from brunch.errors import FetchError, GitError, RemoteError
-from brunch.git import count_commits_ahead_of, rev_parse_verify, run_git
+from brunch.git import rev_parse_verify, run_git
 
 CONVENTIONAL_REMOTE = "origin"
 FALLBACK_DEFAULT_BRANCH = "main"
 DEFAULT_REMOTE_CONFIG_KEY = "checkout.defaultRemote"
-USE_NO_FETCH_HINT = "Work offline with --no-fetch, which branches from the local base."
+USE_NO_FETCH_HINT = "Work offline with --no-fetch, which uses the local state as it is."
 
 
 def remotes(path: Path) -> list[str]:
@@ -82,23 +82,34 @@ def default_branch(path: Path, remote: str) -> str:
     return FALLBACK_DEFAULT_BRANCH
 
 
-def count_unpublished_commits(path: Path, base: str) -> int:
-    """Commits in HEAD that are in neither the local ``base`` nor its remote copy.
+def fetch_all_remotes(path: Path) -> None:
+    """Run ``git fetch --all --prune``; raise ``FetchError`` if it fails.
 
-    A branch started from ``origin/main`` is ahead of a stale local ``main`` by
-    the commits the fetch brought in, none of which are the user's work, so the
-    remote copy counts as published too. Never fails on an unusable remote: it
-    then compares against the local base alone.
+    Pruning drops remote-tracking refs for branches the remote has deleted, so
+    a branch that was deleted without being merged no longer looks pushed.
     """
 
     try:
-        remote = resolve_remote(path, None)
-    except GitError:
-        remote = None
-    published = [base]
-    if remote is not None and rev_parse_verify(path, f"refs/remotes/{remote}/{base}"):
-        published.append(f"{remote}/{base}")
-    return count_commits_ahead_of(path, *published)
+        run_git(["fetch", "--all", "--prune"], cwd=path)
+    except GitError as e:
+        raise FetchError(f"could not fetch: {e}", hint=USE_NO_FETCH_HINT) from e
+
+
+def count_commits_on_no_remote(path: Path, *also_not_in: str) -> int:
+    """Commits in HEAD that no remote-tracking branch contains.
+
+    This is git's own answer to "what have I not pushed anywhere", whether or not
+    the branch has an upstream. Commits reachable from any ref in ``also_not_in``
+    that exists, such as the local base branch, do not count either.
+    """
+
+    excluded = [ref for ref in also_not_in if rev_parse_verify(path, ref)]
+    result = run_git(
+        ["rev-list", "--count", "HEAD", "--not", "--remotes", *excluded], cwd=path, check=False
+    )
+    if result.returncode != 0:
+        return 0
+    return int(result.stdout.strip() or "0")
 
 
 def resolve_start_point(path: Path, remote: str | None, base: str) -> str:

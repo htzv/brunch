@@ -5,11 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from pathlib import Path
 
-import pytest
-
 from brunch import git_merged
-from brunch.errors import GitError
-from brunch.git import get_status
 from tests.conftest import OriginRepo, _git
 
 MakeOrigin = Callable[..., OriginRepo]
@@ -29,25 +25,6 @@ def _feature_branch(origin: OriginRepo, *, commits: int) -> Path:
         _edit_and_commit(origin.canonical, f"feat-{n}.txt", f"feat {n}")
     _git(["push", "-u", "origin", "feat"], cwd=origin.canonical)
     return origin.canonical
-
-
-class TestIsAncestor:
-    def test_branch_merged_by_fast_forward(self, make_origin: MakeOrigin) -> None:
-        origin = make_origin()
-        repo = _feature_branch(origin, commits=1)
-        _git(["push", "origin", "feat:main"], cwd=repo)
-        _git(["fetch", "origin"], cwd=repo)
-        assert git_merged.is_ancestor(repo, "HEAD", "origin/main")
-
-    def test_branch_with_commits_main_lacks(self, make_origin: MakeOrigin) -> None:
-        origin = make_origin()
-        repo = _feature_branch(origin, commits=1)
-        assert not git_merged.is_ancestor(repo, "HEAD", "origin/main")
-
-    def test_unknown_ref_is_an_error_not_a_no(self, make_origin: MakeOrigin) -> None:
-        origin = make_origin()
-        with pytest.raises(GitError):
-            git_merged.is_ancestor(origin.canonical, "no-such-ref", "HEAD")
 
 
 class TestCherryUnmerged:
@@ -82,51 +59,6 @@ class TestCherryUnmerged:
         origin = make_origin()
         repo = _feature_branch(origin, commits=3)
         assert git_merged.cherry_unmerged(repo, "origin/main") == 3
-
-
-class TestUpstreamGone:
-    def test_present_upstream(self, make_origin: MakeOrigin) -> None:
-        origin = make_origin()
-        repo = _feature_branch(origin, commits=1)
-        assert not git_merged.upstream_gone(repo, "feat")
-
-    def test_deleted_upstream_is_invisible_until_a_pruning_fetch(
-        self, make_origin: MakeOrigin
-    ) -> None:
-        origin = make_origin()
-        repo = _feature_branch(origin, commits=1)
-        origin.squash_merge("feat")
-
-        _git(["fetch", "origin"], cwd=repo)
-        assert not git_merged.upstream_gone(repo, "feat")
-
-        _git(["fetch", "--prune", "origin"], cwd=repo)
-        assert git_merged.upstream_gone(repo, "feat")
-
-    def test_gone_upstream_hides_unpushed_commits_from_status(
-        self, make_origin: MakeOrigin
-    ) -> None:
-        """Why a gone upstream needs its own check: `ahead` reads 0 with a commit unpushed."""
-
-        origin = make_origin()
-        repo = _feature_branch(origin, commits=1)
-        origin.squash_merge("feat")
-        _edit_and_commit(repo, "late.txt", "late work, never pushed")
-        _git(["fetch", "--prune", "origin"], cwd=repo)
-
-        status = get_status(repo)
-
-        assert git_merged.upstream_gone(repo, "feat")
-        assert status.upstream == "origin/feat"
-        assert status.ahead == 0
-
-    def test_branch_without_upstream_is_not_gone(self, make_origin: MakeOrigin) -> None:
-        origin = make_origin()
-        _git(["branch", "local-only"], cwd=origin.canonical)
-        assert not git_merged.upstream_gone(origin.canonical, "local-only")
-
-    def test_unknown_branch_is_not_gone(self, make_origin: MakeOrigin) -> None:
-        assert not git_merged.upstream_gone(make_origin().canonical, "nope")
 
 
 class TestTreeContainedIn:
@@ -188,7 +120,7 @@ class TestTreeContainedIn:
         _git(["checkout", "-b", "feat"], cwd=repo)
         _git(["commit", "--allow-empty", "-m", "an intent with no content"], cwd=repo)
 
-        assert not git_merged.is_ancestor(repo, "HEAD", "origin/main")
+        assert _git(["rev-list", "--count", "origin/main..HEAD"], cwd=repo).strip() == "1"
         assert git_merged.tree_contained_in(repo, "origin/main")
 
     def test_a_change_and_its_revert_are_not_part_of_the_proof(
@@ -200,5 +132,5 @@ class TestTreeContainedIn:
         _edit_and_commit(repo, "scratch.txt", "try something")
         _git(["revert", "--no-edit", "HEAD"], cwd=repo)
 
-        assert not git_merged.is_ancestor(repo, "HEAD", "origin/main")
+        assert _git(["rev-list", "--count", "origin/main..HEAD"], cwd=repo).strip() == "2"
         assert git_merged.tree_contained_in(repo, "origin/main")
