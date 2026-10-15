@@ -200,15 +200,16 @@ def rebase(
     run_git(args, cwd=path)
 
 
-def count_commits_ahead_of(path: Path, base: str) -> int:
-    """Count commits in HEAD that are not reachable from ``base``.
+def count_commits_ahead_of(path: Path, base: str, *also_not_in: str) -> int:
+    """Count commits in HEAD that are not reachable from ``base`` or any ``also_not_in`` ref.
 
-    Returns 0 if ``base`` cannot be resolved or any other error occurs;
+    Returns 0 if a ref cannot be resolved or any other error occurs;
     callers that need to distinguish "no ahead commits" from "base
     unknown" should check ``rev_parse_verify`` first.
     """
 
-    result = run_git(["rev-list", "--count", "HEAD", f"^{base}"], cwd=path, check=False)
+    excluded = [f"^{ref}" for ref in (base, *also_not_in)]
+    result = run_git(["rev-list", "--count", "HEAD", *excluded], cwd=path, check=False)
     if result.returncode != 0:
         return 0
     try:
