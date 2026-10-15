@@ -120,6 +120,14 @@ it. `br --version` reads it from the installed package. After you change it, run
   work. They do not deserve their own patch number. Recommend a release candidate
   of the next version instead, for example `0.1.3rc5`. The final pull request of
   the set drops the suffix (`0.1.3`).
+- **Update the changelog in the same pull request.** `CHANGELOG.md` lists what a
+  user would notice: a new command or flag, a changed or removed behaviour, a fix
+  for something that shipped. Add one line, with the pull request number, under
+  `[Unreleased]` in Added, Changed, Fixed or Removed. Mark a breaking change
+  **Breaking:**. Internal work (tests, CI, refactors) and fixes to code that has
+  not been released do not belong in it. The pull request that bumps the version
+  renames `[Unreleased]` to the new version and date, adds an empty
+  `[Unreleased]`, and updates the links at the bottom.
 - **Bump in its own commit**, and only when the person says yes.
 - **Tag releases.** A release is a git tag on the commit that bumped the version:
   `v0.1.3`, or `v0.1.3rc5` for a release candidate. After the bump is merged,

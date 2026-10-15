@@ -60,3 +60,9 @@ uv tool install --force git+https://github.com/htzv/brunch@<tag>
 ```bash
 br --version
 ```
+
+## See what changed
+
+The [changelog](https://github.com/htzv/brunch/blob/main/CHANGELOG.md) lists the
+changes in each release. Read it before updating across a breaking change: the
+entry says what stops working and what to do.

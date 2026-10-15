@@ -70,6 +70,7 @@ first.
 
 ## More
 
+- [Changelog](CHANGELOG.md): what changed in each release.
 - [Walkthrough](docs-site/walkthrough/index.md): nine short pages that take one task
   from creation to teardown. Build the site with
   `uv sync --extra docs && uv run mkdocs serve`.
