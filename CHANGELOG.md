@@ -8,6 +8,8 @@ version. Entries refer to pull requests in
 
 ## [Unreleased]
 
+## [0.1.0rc3] - 2026-10-15
+
 ### Added
 
 - `br add` fetches the repo's remote first and starts the new branch from its
@@ -79,6 +81,7 @@ First release candidate.
 - `br <command> --help` is complete for every command, with an example. (#7, #8)
 - The version is read from the installed package, so `br --version` is accurate. (#9)
 
-[Unreleased]: https://github.com/htzv/brunch/compare/v0.1.0rc2...HEAD
+[Unreleased]: https://github.com/htzv/brunch/compare/v0.1.0rc3...HEAD
+[0.1.0rc3]: https://github.com/htzv/brunch/compare/v0.1.0rc2...v0.1.0rc3
 [0.1.0rc2]: https://github.com/htzv/brunch/compare/v0.1.0rc1...v0.1.0rc2
 [0.1.0rc1]: https://github.com/htzv/brunch/tree/v0.1.0rc1
