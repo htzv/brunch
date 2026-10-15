@@ -137,6 +137,13 @@ def remote_copy_of_base(path: Path, base: str) -> str | None:
     return None
 
 
+def remote_branch_ref(path: Path, remote: str, branch: str) -> str | None:
+    """``<remote>/<branch>`` if that remote-tracking ref exists, else None."""
+
+    ref = f"{remote}/{branch}"
+    return ref if rev_parse_verify(path, f"refs/remotes/{ref}") else None
+
+
 def resolve_start_point(path: Path, remote: str | None, base: str) -> str:
     """The ref a new branch should start from.
 

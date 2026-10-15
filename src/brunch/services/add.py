@@ -24,6 +24,8 @@ from brunch.models import (
 )
 from brunch.paths import canonical_clone_path, parse_repo_spec
 
+DEFAULT_BASE = "main"
+
 
 def add_repo(
     location: WorkspaceLocation,
@@ -31,7 +33,7 @@ def add_repo(
     *,
     repo: str,
     branch: str | None = None,
-    base: str = "main",
+    base: str | None = None,
     remote: str | None = None,
     fetch: bool = True,
     dry_run: bool = False,
@@ -39,11 +41,15 @@ def add_repo(
     """Add a [[repo]] entry and create its worktree.
 
     ``branch`` defaults to the workspace name (matches the template-default
-    convention). ``base`` defaults to ``"main"``. Both can be overridden.
+    convention). ``base`` defaults to ``"main"`` and is only given explicitly
+    when it should decide where the branch starts.
 
-    Unless ``fetch`` is False, the chosen remote is fetched first and a new
-    branch starts from its copy of ``base``. A failed fetch, or an unusable
-    ``remote``, stops everything before anything is created.
+    Unless ``fetch`` is False, the chosen remote is fetched (and pruned) first.
+    If the remote has a branch of the same name, the new branch is taken from it
+    and tracks it, as ``git switch`` does; an explicit ``base`` then has no
+    meaning, so it is refused. Otherwise the new branch starts from the remote's
+    copy of the base. A failed fetch, or an unusable ``remote``, stops
+    everything before anything is created.
     """
 
     if location.mode != "workspace":
@@ -54,6 +60,7 @@ def add_repo(
 
     manifest = load_workspace_manifest(location.manifest_path)
     effective_branch = branch or manifest.name
+    effective_base = base or DEFAULT_BASE
 
     if any(r.repo == repo for r in manifest.repos):
         raise DuplicateRepoError(
@@ -95,43 +102,71 @@ def add_repo(
                 ),
             )
 
-    _refuse_existing_branch(canonical, effective_branch, base)
+    _refuse_existing_branch(canonical, effective_branch, effective_base)
 
     chosen_remote = _choose_remote(canonical, remote, fetch=fetch)
     will_fetch = fetch and chosen_remote is not None
-    start_point = base
+    start_point = effective_base
+    tracks: str | None = None
     if chosen_remote is not None and fetch:
         if not dry_run:
-            git_remote.fetch_remote(canonical, chosen_remote)
+            # Prune, so a remote branch deleted since the last fetch is not followed.
+            git_remote.fetch_remote(canonical, chosen_remote, prune=True)
             # A fetch can create local branches (a mirror-style refspec), so look again.
-            _refuse_existing_branch(canonical, effective_branch, base)
-        start_point = git_remote.resolve_start_point(canonical, chosen_remote, base)
+            _refuse_existing_branch(canonical, effective_branch, effective_base)
+        tracks = git_remote.remote_branch_ref(canonical, chosen_remote, effective_branch)
+        if tracks is not None:
+            _refuse_explicit_base(chosen_remote, effective_branch, base)
+            start_point = tracks
+        else:
+            start_point = git_remote.resolve_start_point(canonical, chosen_remote, effective_base)
 
     if dry_run:
         return AddOutcome(
             repo=repo,
             branch=effective_branch,
-            base=base,
+            base=effective_base,
             worktree_path=worktree_path,
             dry_run=True,
             remote=chosen_remote,
             start_point=start_point,
             fetched=will_fetch,
+            tracks=tracks,
         )
 
-    git.add_worktree(canonical, worktree_path, branch=effective_branch, start_point=start_point)
-    manifest.repos.append(RepoEntry(repo=repo, branch=effective_branch, base=base))
+    git.add_worktree(
+        canonical,
+        worktree_path,
+        branch=effective_branch,
+        start_point=start_point,
+        track=tracks is not None,
+    )
+    manifest.repos.append(RepoEntry(repo=repo, branch=effective_branch, base=effective_base))
     write_workspace_manifest(location.manifest_path, manifest)
 
     return AddOutcome(
         repo=repo,
         branch=effective_branch,
-        base=base,
+        base=effective_base,
         worktree_path=worktree_path,
         remote=chosen_remote,
         start_point=start_point,
         fetched=will_fetch,
+        tracks=tracks,
     )
+
+
+def _refuse_explicit_base(remote: str, branch: str, base: str | None) -> None:
+    """A branch taken from its remote branch has no use for ``--base``."""
+
+    if base is not None:
+        raise BranchConflictError(
+            f"branch {branch!r} already exists on {remote!r}, so --base {base!r} would be ignored",
+            hint=(
+                "drop --base to take the branch from the remote and track it, "
+                "or pick another name with --branch"
+            ),
+        )
 
 
 def _refuse_existing_branch(canonical: Path, branch: str, base: str) -> None:

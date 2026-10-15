@@ -111,13 +111,16 @@ def branch_exists(canonical: Path, branch: str) -> bool:
     return result.returncode == 0
 
 
-def add_worktree(canonical: Path, target: Path, *, branch: str, start_point: str) -> None:
+def add_worktree(
+    canonical: Path, target: Path, *, branch: str, start_point: str, track: bool = False
+) -> None:
     """Run ``git worktree add`` to materialise a worktree at ``target``.
 
     If ``branch`` already exists in ``canonical``, it is checked out as-is and
-    ``start_point`` plays no part. Otherwise, it is created from ``start_point``
-    without tracking it, so a later ``git push`` can never target the base
-    branch. Either way, ``target`` ends up on ``branch``.
+    ``start_point`` plays no part. Otherwise, it is created from ``start_point``,
+    tracking it only when ``track`` is set: a new branch must not track the base
+    branch, or a later ``git push`` could target it, but a branch taken from its
+    own remote branch should. Either way, ``target`` ends up on ``branch``.
     """
 
     target.parent.mkdir(parents=True, exist_ok=True)
@@ -125,7 +128,15 @@ def add_worktree(canonical: Path, target: Path, *, branch: str, start_point: str
         run_git(["worktree", "add", str(target), branch], cwd=canonical)
     else:
         run_git(
-            ["worktree", "add", "--no-track", "-b", branch, str(target), start_point],
+            [
+                "worktree",
+                "add",
+                "--track" if track else "--no-track",
+                "-b",
+                branch,
+                str(target),
+                start_point,
+            ],
             cwd=canonical,
         )
 

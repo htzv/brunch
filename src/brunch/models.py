@@ -263,6 +263,8 @@ class AddOutcome(BaseModel):
     """The ref a new branch starts from, such as ``origin/main`` or the local ``main``."""
     fetched: bool = False
     """The remote was fetched first (with ``dry_run``: would be)."""
+    tracks: str | None = None
+    """The remote branch of the same name the new branch was taken from and now tracks."""
 
 
 class InitOutcome(BaseModel):

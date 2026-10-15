@@ -8,6 +8,20 @@ version. Entries refer to pull requests in
 
 ## [Unreleased]
 
+### Added
+
+- `br add` takes a branch that already exists on the remote, as `git switch`
+  does: the worktree starts from `origin/<branch>` and tracks it, which suits
+  reviewing a pull request or resuming work from another machine. The outcome and
+  `--json` report it as `tracks`. Remote branches deleted since the last fetch are
+  pruned first, so they are not followed.
+
+### Changed
+
+- **Breaking:** `br add --base <branch>` is an error when the remote has a branch
+  of the workspace's name, because the base would be ignored. Drop `--base`, or
+  pick another `--branch`.
+
 ## [0.1.0rc3] - 2026-10-15
 
 ### Added

@@ -428,6 +428,11 @@ def _describe_start(outcome: AddOutcome) -> str:
     if not outcome.fetched:
         return f"not fetched (--no-fetch), so it starts from the local {outcome.start_point!r}"
     fetch = "would fetch" if outcome.dry_run else "fetched"
+    if outcome.tracks is not None:
+        return (
+            f"{fetch} {outcome.remote!r}; the branch is on the remote, so it starts from "
+            f"{outcome.tracks!r} and tracks it"
+        )
     return f"{fetch} {outcome.remote!r}; starts from {outcome.start_point!r}"
 
 

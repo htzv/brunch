@@ -255,6 +255,26 @@ class TestAddWorktreeStartPoint:
         )
         assert upstream.stdout.strip() == ""
 
+    def test_track_makes_the_new_branch_follow_the_start_point(
+        self, make_origin: Callable[..., OriginRepo], tmp_path: Path
+    ) -> None:
+        origin = make_origin()
+        origin.publish_branch("pr")
+        subprocess.run(["git", "fetch", "origin"], cwd=origin.canonical, check=True)
+
+        add_worktree(
+            origin.canonical, tmp_path / "wt", branch="pr", start_point="origin/pr", track=True
+        )
+
+        tracked = subprocess.run(
+            ["git", "rev-parse", "--abbrev-ref", "pr@{upstream}"],
+            cwd=origin.canonical,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        assert tracked.stdout.strip() == "origin/pr"
+
     def test_existing_branch_is_checked_out_as_it_is(
         self, make_origin: Callable[..., OriginRepo], tmp_path: Path
     ) -> None:
