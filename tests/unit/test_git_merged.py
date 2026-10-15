@@ -172,3 +172,33 @@ class TestTreeContainedIn:
 
     def test_unknown_ref_is_not_contained(self, make_origin: MakeOrigin) -> None:
         assert not git_merged.tree_contained_in(make_origin().canonical, "no-such-ref")
+
+    def test_commits_without_content_are_not_part_of_the_proof(
+        self, make_origin: MakeOrigin
+    ) -> None:
+        """Contract: this proves content is in `ref`, not that commits are reachable.
+
+        An empty commit never reached main, and its message is not there, yet
+        nothing of value is lost: a squash merge drops it as well, and removing a
+        worktree keeps the branch.
+        """
+
+        origin = make_origin()
+        repo = origin.canonical
+        _git(["checkout", "-b", "feat"], cwd=repo)
+        _git(["commit", "--allow-empty", "-m", "an intent with no content"], cwd=repo)
+
+        assert not git_merged.is_ancestor(repo, "HEAD", "origin/main")
+        assert git_merged.tree_contained_in(repo, "origin/main")
+
+    def test_a_change_and_its_revert_are_not_part_of_the_proof(
+        self, make_origin: MakeOrigin
+    ) -> None:
+        origin = make_origin()
+        repo = origin.canonical
+        _git(["checkout", "-b", "feat"], cwd=repo)
+        _edit_and_commit(repo, "scratch.txt", "try something")
+        _git(["revert", "--no-edit", "HEAD"], cwd=repo)
+
+        assert not git_merged.is_ancestor(repo, "HEAD", "origin/main")
+        assert git_merged.tree_contained_in(repo, "origin/main")

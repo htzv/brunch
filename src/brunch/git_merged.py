@@ -67,6 +67,11 @@ def tree_contained_in(path: Path, ref: str, head: str = "HEAD") -> bool:
     changes the result, and a conflict (``ref`` edited the same lines later)
     cannot be proven, so both give False. Needs git 2.38 or newer; older git
     gives False.
+
+    This proves that the *content* is in ``ref``, not that the commits are
+    reachable from it. Commits that change no content (an empty commit, a change
+    and its revert) and commit messages are not covered; a squash merge discards
+    them too, and removing a worktree never deletes its branch.
     """
 
     if not (rev_parse_verify(path, ref) and rev_parse_verify(path, head)):
