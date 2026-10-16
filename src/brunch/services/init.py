@@ -25,6 +25,8 @@ def init_workspace(
     config: ToolConfig,
     template_id: str | None = None,
     dry_run: bool = False,
+    remote: str | None = None,
+    fetch: bool = True,
 ) -> InitOutcome:
     """Create a workspace directory + ``brunch.toml``.
 
@@ -58,7 +60,7 @@ def init_workspace(
 
     if manifest.repos:
         location = WorkspaceLocation(mode="workspace", root=target, manifest_path=manifest_path)
-        sync_report = sync_workspace(location, config)
+        sync_report = sync_workspace(location, config, remote=remote, fetch=fetch)
 
     return InitOutcome(
         name=name,

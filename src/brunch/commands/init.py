@@ -39,17 +39,24 @@ def init(
         False, "--dry-run", help="Show what would happen without doing it."
     ),
     json_output: bool = typer.Option(False, "--json", help="Emit JSON instead of text."),
+    remote: str | None = typer.Option(
+        None, "--remote", "-r", help="With -t: remote to fetch and branch from."
+    ),
+    no_fetch: bool = typer.Option(
+        False, "--no-fetch", help="With -t: do not fetch; start from the local base."
+    ),
 ) -> None:
     """Create a workspace, or a workspace set, in a new directory.
 
-    Makes `<parent>/<name>` with a `brunch.toml` inside. It creates no worktrees
-    and runs no git, so add repos afterwards with `br add`. It refuses if the
-    directory already exists.
+    Makes `<parent>/<name>` with a `brunch.toml` inside. Without a template it
+    creates no worktrees and runs no git, so add repos afterwards with `br add`.
+    It refuses if the directory already exists.
 
     `--set` writes a `brunch-set.toml` instead, so the directory can hold several
     workspaces. `-t <template>` fills the manifest from a template and creates
-    the template's worktrees. `--adopt` turns an existing directory into a
-    workspace, like `br adopt`.
+    the template's worktrees as `br sync` does (it fetches each repo's remote
+    first; `--remote` and `--no-fetch` work as there). `--adopt` turns an
+    existing directory into a workspace, like `br adopt`.
 
     Example:
 
@@ -88,6 +95,8 @@ def init(
             config=cfg,
             template_id=template,
             dry_run=dry_run,
+            remote=remote,
+            fetch=not no_fetch,
         )
 
     if json_output:

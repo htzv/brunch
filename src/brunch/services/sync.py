@@ -10,7 +10,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from brunch import git
-from brunch.errors import RepoSpecError, WorkspaceNotFoundError
+from brunch.errors import BrunchError, RepoSpecError, WorkspaceNotFoundError
 from brunch.manifest import load_workspace_manifest
 from brunch.models import (
     RepoEntry,
@@ -21,6 +21,8 @@ from brunch.models import (
     WorkspaceLocation,
 )
 from brunch.paths import canonical_clone_path, parse_repo_spec
+from brunch.services.branch_start import BranchStart, plan_branch_start
+from brunch.start_text import describe_start
 
 
 def sync_workspace(
@@ -28,11 +30,18 @@ def sync_workspace(
     config: ToolConfig,
     *,
     dry_run: bool = False,
+    remote: str | None = None,
+    fetch: bool = True,
 ) -> SyncReport:
     """Run a sync pass against ``location``.
 
     Returns a structured report. When ``dry_run`` is true, no side effects
     are performed but the report still describes what *would* happen.
+
+    A missing worktree whose branch does not exist yet is created the way
+    ``br add`` creates one (see :mod:`brunch.services.branch_start`): the remote
+    is fetched first unless ``fetch`` is False, and ``remote`` picks which one.
+    A failed fetch is an error for that repo only.
     """
 
     if location.mode != "workspace":
@@ -44,7 +53,11 @@ def sync_workspace(
     manifest = load_workspace_manifest(location.manifest_path)
     actions: list[SyncAction] = []
     for entry in manifest.repos:
-        actions.append(_reconcile_one(entry, location.root, config, dry_run=dry_run))
+        actions.append(
+            _reconcile_one(
+                entry, location.root, config, dry_run=dry_run, remote=remote, fetch=fetch
+            )
+        )
 
     return SyncReport(
         workspace_name=manifest.name,
@@ -60,6 +73,8 @@ def _reconcile_one(
     config: ToolConfig,
     *,
     dry_run: bool,
+    remote: str | None,
+    fetch: bool,
 ) -> SyncAction:
     """Compute (and optionally apply) the reconciliation for one [[repo]]."""
 
@@ -94,7 +109,9 @@ def _reconcile_one(
         )
 
     if not worktree.exists():
-        return _create_worktree(entry, spec, canonical, worktree, dry_run=dry_run)
+        return _create_worktree(
+            entry, spec, canonical, worktree, dry_run=dry_run, remote=remote, fetch=fetch
+        )
 
     if not git.is_git_repo(worktree):
         return SyncAction(
@@ -144,6 +161,8 @@ def _create_worktree(
     worktree: Path,
     *,
     dry_run: bool,
+    remote: str | None,
+    fetch: bool,
 ) -> SyncAction:
     # Pre-flight: branch already checked out elsewhere?
     try:
@@ -169,27 +188,68 @@ def _create_worktree(
             hint="pick a different branch, or remove the conflicting worktree",
         )
 
-    if dry_run:
-        return SyncAction(
-            repo=entry.repo,
-            short_name=spec.name,
-            action="created",
-            message=f"would create worktree at {worktree} on {entry.branch!r}",
-        )
+    # An existing branch is checked out as it is, so there is nothing to fetch for.
+    start: BranchStart | None = None
+    if not git.branch_exists(canonical, entry.branch):
+        try:
+            start = plan_branch_start(
+                canonical,
+                branch=entry.branch,
+                base=entry.base,
+                base_was_given=False,
+                requested_remote=remote,
+                fetch=fetch,
+                dry_run=dry_run,
+            )
+        except BrunchError as e:
+            return SyncAction(
+                repo=entry.repo,
+                short_name=spec.name,
+                action="error",
+                message=str(e),
+                hint=e.hint,
+            )
 
-    try:
-        git.add_worktree(canonical, worktree, branch=entry.branch, start_point=entry.base)
-    except Exception as e:
-        return SyncAction(
-            repo=entry.repo,
-            short_name=spec.name,
-            action="error",
-            message=str(e),
+    verb = "would create" if dry_run else "created"
+    detail = (
+        " ("
+        + describe_start(
+            remote=start.remote,
+            start_point=start.start_point,
+            fetched=start.fetched,
+            tracks=start.tracks,
+            dry_run=dry_run,
         )
+        + ")"
+        if start is not None
+        else ""
+    )
+    message = f"{verb} worktree at {worktree} on {entry.branch!r}{detail}"
+
+    if not dry_run:
+        try:
+            git.add_worktree(
+                canonical,
+                worktree,
+                branch=entry.branch,
+                start_point=start.start_point if start is not None else entry.base,
+                track=start is not None and start.tracks is not None,
+            )
+        except Exception as e:
+            return SyncAction(
+                repo=entry.repo,
+                short_name=spec.name,
+                action="error",
+                message=str(e),
+            )
 
     return SyncAction(
         repo=entry.repo,
         short_name=spec.name,
         action="created",
-        message=f"created worktree at {worktree} on {entry.branch!r}",
+        message=message,
+        remote=start.remote if start else None,
+        start_point=start.start_point if start else None,
+        fetched=start.fetched if start else False,
+        tracks=start.tracks if start else None,
     )

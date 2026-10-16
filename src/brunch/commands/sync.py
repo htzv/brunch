@@ -23,11 +23,23 @@ def sync(
     dry_run: bool = typer.Option(
         False, "--dry-run", help="Show what would happen without doing it."
     ),
+    remote: str | None = typer.Option(
+        None, "--remote", "-r", help="Remote to fetch and branch from (default: see below)."
+    ),
+    no_fetch: bool = typer.Option(
+        False, "--no-fetch", help="Do not fetch; start new branches from the local base."
+    ),
 ) -> None:
     """Create missing worktrees and report anything that differs from `brunch.toml`.
 
-    Creates each worktree listed in the manifest that does not exist yet. It never
-    deletes or switches anything. It warns when a worktree is on a different
+    Creates each worktree listed in the manifest that does not exist yet, the way
+    `br add` does: a branch that already exists in the clone is checked out as it
+    is; otherwise the repo's remote is fetched first, and the new branch is taken
+    from the remote's branch of the same name (and tracks it) or else starts from
+    the remote's copy of the base. The remote is `--remote`, else git's
+    `checkout.defaultRemote`, else the only remote, else `origin`. A repo whose
+    fetch fails is an error for that repo only; `--no-fetch` starts from the local
+    base instead. It never deletes or switches anything. It warns when a worktree is on a different
     branch than the manifest declares, has uncommitted changes or untracked
     files, or cannot be read by git. Warnings do not change the exit code; errors
     do. It does not work at a set root.
@@ -41,7 +53,7 @@ def sync(
 
     location = discover_workspace(workspace or Path.cwd())
     cfg = load_config()
-    report = sync_workspace(location, cfg, dry_run=dry_run)
+    report = sync_workspace(location, cfg, dry_run=dry_run, remote=remote, fetch=not no_fetch)
 
     if json_output:
         typer.echo(report.model_dump_json(indent=2))

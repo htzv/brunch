@@ -10,6 +10,13 @@ version. Entries refer to pull requests in
 
 ### Added
 
+- `br sync` and `br init -t` create missing worktrees the way `br add` does: they
+  fetch the repo's remote first, take a branch the remote already has (and track
+  it), and otherwise start new branches from the remote's current tip. Both accept
+  `--remote` and `--no-fetch`. A repo whose fetch fails is an error for that repo
+  only, and a branch that already exists in the clone is checked out as it is,
+  without fetching. `--json` reports `remote`, `start_point`, `fetched` and
+  `tracks` per created worktree. (#30)
 - `br add` takes a branch that already exists on the remote, as `git switch`
   does: the worktree starts from `origin/<branch>` and tracks it, which suits
   reviewing a pull request or resuming work from another machine. The outcome and

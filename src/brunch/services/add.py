@@ -5,13 +5,12 @@ from __future__ import annotations
 from collections.abc import Iterator
 from pathlib import Path
 
-from brunch import git, git_remote
+from brunch import git
 from brunch.errors import (
     BranchConflictError,
     BrunchError,
     DuplicateRepoError,
     GitError,
-    RemoteError,
     WorkspaceNotFoundError,
 )
 from brunch.manifest import load_workspace_manifest, write_workspace_manifest
@@ -23,6 +22,7 @@ from brunch.models import (
     WorkspaceManifest,
 )
 from brunch.paths import canonical_clone_path, parse_repo_spec
+from brunch.services.branch_start import plan_branch_start
 
 DEFAULT_BASE = "main"
 
@@ -104,22 +104,18 @@ def add_repo(
 
     _refuse_existing_branch(canonical, effective_branch, effective_base)
 
-    chosen_remote = _choose_remote(canonical, remote, fetch=fetch)
-    will_fetch = fetch and chosen_remote is not None
-    start_point = effective_base
-    tracks: str | None = None
-    if chosen_remote is not None and fetch:
-        if not dry_run:
-            # Prune, so a remote branch deleted since the last fetch is not followed.
-            git_remote.fetch_remote(canonical, chosen_remote, prune=True)
-            # A fetch can create local branches (a mirror-style refspec), so look again.
-            _refuse_existing_branch(canonical, effective_branch, effective_base)
-        tracks = git_remote.remote_branch_ref(canonical, chosen_remote, effective_branch)
-        if tracks is not None:
-            _refuse_explicit_base(chosen_remote, effective_branch, base)
-            start_point = tracks
-        else:
-            start_point = git_remote.resolve_start_point(canonical, chosen_remote, effective_base)
+    start = plan_branch_start(
+        canonical,
+        branch=effective_branch,
+        base=effective_base,
+        base_was_given=base is not None,
+        requested_remote=remote,
+        fetch=fetch,
+        dry_run=dry_run,
+    )
+    if not dry_run and start.fetched:
+        # A fetch can create local branches (a mirror-style refspec), so look again.
+        _refuse_existing_branch(canonical, effective_branch, effective_base)
 
     if dry_run:
         return AddOutcome(
@@ -128,18 +124,18 @@ def add_repo(
             base=effective_base,
             worktree_path=worktree_path,
             dry_run=True,
-            remote=chosen_remote,
-            start_point=start_point,
-            fetched=will_fetch,
-            tracks=tracks,
+            remote=start.remote,
+            start_point=start.start_point,
+            fetched=start.fetched,
+            tracks=start.tracks,
         )
 
     git.add_worktree(
         canonical,
         worktree_path,
         branch=effective_branch,
-        start_point=start_point,
-        track=tracks is not None,
+        start_point=start.start_point,
+        track=start.tracks is not None,
     )
     manifest.repos.append(RepoEntry(repo=repo, branch=effective_branch, base=effective_base))
     write_workspace_manifest(location.manifest_path, manifest)
@@ -149,24 +145,11 @@ def add_repo(
         branch=effective_branch,
         base=effective_base,
         worktree_path=worktree_path,
-        remote=chosen_remote,
-        start_point=start_point,
-        fetched=will_fetch,
-        tracks=tracks,
+        remote=start.remote,
+        start_point=start.start_point,
+        fetched=start.fetched,
+        tracks=start.tracks,
     )
-
-
-def _refuse_explicit_base(remote: str, branch: str, base: str | None) -> None:
-    """A branch taken from its remote branch has no use for ``--base``."""
-
-    if base is not None:
-        raise BranchConflictError(
-            f"branch {branch!r} already exists on {remote!r}, so --base {base!r} would be ignored",
-            hint=(
-                "drop --base to take the branch from the remote and track it, "
-                "or pick another name with --branch"
-            ),
-        )
 
 
 def _refuse_existing_branch(canonical: Path, branch: str, base: str) -> None:
@@ -180,21 +163,6 @@ def _refuse_existing_branch(canonical: Path, branch: str, base: str) -> None:
                 f"workspace, delete it first: git -C {canonical} branch -d {branch}"
             ),
         )
-
-
-def _choose_remote(canonical: Path, requested: str | None, *, fetch: bool) -> str | None:
-    """The remote to fetch and branch from.
-
-    With ``fetch`` off, nothing depends on the remote, so an ambiguous choice is
-    not an error; the remote is then only reported when it can be determined.
-    """
-
-    try:
-        return git_remote.resolve_remote(canonical, requested)
-    except RemoteError:
-        if fetch or requested is not None:
-            raise
-        return None
 
 
 def _existing_short_names(manifest: WorkspaceManifest, config: ToolConfig) -> Iterator[str]:
