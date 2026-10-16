@@ -22,7 +22,7 @@ from brunch.models import (
 )
 from brunch.paths import canonical_clone_path, parse_repo_spec
 from brunch.services.branch_start import BranchStart, plan_branch_start
-from brunch.start_text import describe_start
+from brunch.start_text import FETCH_CREATED_THE_BRANCH, describe_start
 
 
 def sync_workspace(
@@ -210,21 +210,18 @@ def _create_worktree(
                 hint=e.hint,
             )
 
-    verb = "would create" if dry_run else "created"
-    detail = (
-        " ("
-        + describe_start(
-            remote=start.remote,
-            start_point=start.start_point,
-            fetched=start.fetched,
-            tracks=start.tracks,
-            dry_run=dry_run,
-        )
-        + ")"
-        if start is not None
-        else ""
+    # A custom fetch refspec can make the branch itself; it is then checked out as it
+    # is, so nothing started from a start point or was set to track.
+    made_by_fetch = (
+        start is not None
+        and start.fetched
+        and not dry_run
+        and git.branch_exists(canonical, entry.branch)
     )
-    message = f"{verb} worktree at {worktree} on {entry.branch!r}{detail}"
+    verb = "would create" if dry_run else "created"
+    message = f"{verb} worktree at {worktree} on {entry.branch!r}"
+    if start is not None:
+        message += f" ({_describe(start, made_by_fetch=made_by_fetch, dry_run=dry_run)})"
 
     if not dry_run:
         try:
@@ -233,7 +230,7 @@ def _create_worktree(
                 worktree,
                 branch=entry.branch,
                 start_point=start.start_point if start is not None else entry.base,
-                track=start is not None and start.tracks is not None,
+                track=start is not None and start.tracks is not None and not made_by_fetch,
             )
         except Exception as e:
             return SyncAction(
@@ -249,7 +246,19 @@ def _create_worktree(
         action="created",
         message=message,
         remote=start.remote if start else None,
-        start_point=start.start_point if start else None,
+        start_point=None if made_by_fetch or start is None else start.start_point,
         fetched=start.fetched if start else False,
-        tracks=start.tracks if start else None,
+        tracks=None if made_by_fetch or start is None else start.tracks,
+    )
+
+
+def _describe(start: BranchStart, *, made_by_fetch: bool, dry_run: bool) -> str:
+    if made_by_fetch:
+        return FETCH_CREATED_THE_BRANCH.format(remote=start.remote)
+    return describe_start(
+        remote=start.remote,
+        start_point=start.start_point,
+        fetched=start.fetched,
+        tracks=start.tracks,
+        dry_run=dry_run,
     )
