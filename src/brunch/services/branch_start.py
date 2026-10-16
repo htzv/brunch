@@ -20,6 +20,8 @@ class BranchStart:
 
     remote: str | None
     """The remote chosen; None when the repo has none (or none could be chosen offline)."""
+    base: str
+    """The base branch: the one given, else the remote's default branch."""
     start_point: str
     fetched: bool
     """The remote was fetched (with ``dry_run``: would be)."""
@@ -31,7 +33,7 @@ def plan_branch_start(
     canonical: Path,
     *,
     branch: str,
-    base: str,
+    base: str | None,
     base_was_given: bool,
     requested_remote: str | None,
     fetch: bool,
@@ -39,14 +41,24 @@ def plan_branch_start(
 ) -> BranchStart:
     """Fetch if asked to, and decide the start point for a new ``branch``.
 
-    ``base_was_given`` says the person chose ``base`` explicitly; that is an
-    error when the remote already has the branch, since the base would be
-    ignored. Raises ``FetchError`` or ``RemoteError`` before anything is created.
+    ``base`` is None when there is none: it then becomes the remote's default
+    branch (``main`` when that is unknown). ``base_was_given`` says the person
+    chose the base; that is an error when the remote already has the branch,
+    since the base would be ignored (a base recorded in ``brunch.toml`` is not
+    a choice made now). Raises ``FetchError`` or ``RemoteError`` before anything
+    is created.
     """
 
     remote = _choose_remote(canonical, requested_remote, fetch=fetch)
+    effective_base = base or _default_base(canonical, remote)
     if remote is None or not fetch:
-        return BranchStart(remote=remote, start_point=base, fetched=False, tracks=None)
+        return BranchStart(
+            remote=remote,
+            base=effective_base,
+            start_point=effective_base,
+            fetched=False,
+            tracks=None,
+        )
 
     if not dry_run:
         # Prune, so a remote branch deleted since the last fetch is not followed.
@@ -54,9 +66,21 @@ def plan_branch_start(
     tracks = git_remote.remote_branch_ref(canonical, remote, branch)
     if tracks is not None:
         _refuse_explicit_base(remote, branch, base if base_was_given else None)
-        return BranchStart(remote=remote, start_point=tracks, fetched=True, tracks=tracks)
-    start_point = git_remote.resolve_start_point(canonical, remote, base)
-    return BranchStart(remote=remote, start_point=start_point, fetched=True, tracks=None)
+        return BranchStart(
+            remote=remote, base=effective_base, start_point=tracks, fetched=True, tracks=tracks
+        )
+    start_point = git_remote.resolve_start_point(canonical, remote, effective_base)
+    return BranchStart(
+        remote=remote, base=effective_base, start_point=start_point, fetched=True, tracks=None
+    )
+
+
+def _default_base(canonical: Path, remote: str | None) -> str:
+    """The remote's default branch as the clone last saw it, else ``main``."""
+
+    if remote is None:
+        return git_remote.FALLBACK_DEFAULT_BRANCH
+    return git_remote.default_branch(canonical, remote)
 
 
 def _choose_remote(canonical: Path, requested: str | None, *, fetch: bool) -> str | None:

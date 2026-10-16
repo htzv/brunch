@@ -136,22 +136,24 @@ class OriginRepo:
     so ``canonical`` falls behind without knowing it until it fetches.
     """
 
-    def __init__(self, root: Path, name: str) -> None:
+    def __init__(self, root: Path, name: str, default_branch: str = "main") -> None:
         self.bare = root / f"{name}.git"
         self.canonical = root / name
+        self.default_branch = default_branch
         self._pusher = root / f"{name}-pusher"
         self._advances = 0
-        _git(["init", "--bare", "-b", "main", str(self.bare)])
+        _git(["init", "--bare", "-b", default_branch, str(self.bare)])
         _git(["clone", str(self.bare), str(self._pusher)])
         (self._pusher / "README.md").write_text(f"# {name}\n", encoding="utf-8")
         _git(["add", "."], cwd=self._pusher)
         _git(["commit", "-m", "initial commit"], cwd=self._pusher)
-        _git(["push", "origin", "HEAD:main"], cwd=self._pusher)
+        _git(["push", "origin", f"HEAD:{default_branch}"], cwd=self._pusher)
         _git(["clone", str(self.bare), str(self.canonical)])
 
-    def advance(self, branch: str = "main") -> str:
-        """Push one new commit to ``branch`` on origin; return its sha."""
+    def advance(self, branch: str | None = None) -> str:
+        """Push one new commit to ``branch`` (default: the default branch); return its sha."""
 
+        branch = branch or self.default_branch
         _git(["fetch", "origin"], cwd=self._pusher)
         _git(["checkout", "-B", branch, f"origin/{branch}"], cwd=self._pusher)
         self._advances += 1
@@ -231,10 +233,10 @@ def make_origin(tmp_path: Path) -> Callable[..., OriginRepo]:
 
     counter = {"n": 0}
 
-    def _make(name: str | None = None) -> OriginRepo:
+    def _make(name: str | None = None, *, default_branch: str = "main") -> OriginRepo:
         counter["n"] += 1
         root = tmp_path / "origins"
         root.mkdir(exist_ok=True)
-        return OriginRepo(root, name or f"origin-repo-{counter['n']}")
+        return OriginRepo(root, name or f"origin-repo-{counter['n']}", default_branch)
 
     return _make

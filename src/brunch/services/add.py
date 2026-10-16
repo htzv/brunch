@@ -24,8 +24,6 @@ from brunch.models import (
 from brunch.paths import canonical_clone_path, parse_repo_spec
 from brunch.services.branch_start import plan_branch_start
 
-DEFAULT_BASE = "main"
-
 
 def add_repo(
     location: WorkspaceLocation,
@@ -60,7 +58,6 @@ def add_repo(
 
     manifest = load_workspace_manifest(location.manifest_path)
     effective_branch = branch or manifest.name
-    effective_base = base or DEFAULT_BASE
 
     if any(r.repo == repo for r in manifest.repos):
         raise DuplicateRepoError(
@@ -102,12 +99,12 @@ def add_repo(
                 ),
             )
 
-    _refuse_existing_branch(canonical, effective_branch, effective_base)
+    _refuse_existing_branch(canonical, effective_branch, base)
 
     start = plan_branch_start(
         canonical,
         branch=effective_branch,
-        base=effective_base,
+        base=base,
         base_was_given=base is not None,
         requested_remote=remote,
         fetch=fetch,
@@ -115,13 +112,13 @@ def add_repo(
     )
     if not dry_run and start.fetched:
         # A fetch can create local branches (a mirror-style refspec), so look again.
-        _refuse_existing_branch(canonical, effective_branch, effective_base)
+        _refuse_existing_branch(canonical, effective_branch, base)
 
     if dry_run:
         return AddOutcome(
             repo=repo,
             branch=effective_branch,
-            base=effective_base,
+            base=start.base,
             worktree_path=worktree_path,
             dry_run=True,
             remote=start.remote,
@@ -137,13 +134,13 @@ def add_repo(
         start_point=start.start_point,
         track=start.tracks is not None,
     )
-    manifest.repos.append(RepoEntry(repo=repo, branch=effective_branch, base=effective_base))
+    manifest.repos.append(RepoEntry(repo=repo, branch=effective_branch, base=start.base))
     write_workspace_manifest(location.manifest_path, manifest)
 
     return AddOutcome(
         repo=repo,
         branch=effective_branch,
-        base=effective_base,
+        base=start.base,
         worktree_path=worktree_path,
         remote=start.remote,
         start_point=start.start_point,
@@ -152,12 +149,13 @@ def add_repo(
     )
 
 
-def _refuse_existing_branch(canonical: Path, branch: str, base: str) -> None:
-    """Like `git checkout -b`: never silently reuse a branch and ignore ``base``."""
+def _refuse_existing_branch(canonical: Path, branch: str, base: str | None) -> None:
+    """Like `git checkout -b`: never silently reuse a branch, whatever the base."""
 
     if git.branch_exists(canonical, branch):
+        ignored = f", so --base {base!r} would be ignored" if base is not None else ""
         raise BranchConflictError(
-            f"branch {branch!r} already exists in {canonical}, so --base {base!r} would be ignored",
+            f"branch {branch!r} already exists in {canonical}{ignored}",
             hint=(
                 "pick another name with --branch. If the branch is left over from a removed "
                 f"workspace, delete it first: git -C {canonical} branch -d {branch}"
