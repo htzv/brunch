@@ -92,3 +92,48 @@ def test_a_repo_without_remotes_defaults_to_main(
     _, output = _add(isolated_home / "task-1", "--json")
 
     assert json.loads(output)["base"] == "main"
+
+
+def test_a_missing_remote_head_is_found_by_the_fetch(setup_with_default_branch: SetupFor) -> None:
+    """The fetch recreates `<remote>/HEAD`, so the default is read after it, not before."""
+
+    origin, ws, _ = setup_with_default_branch("master")
+    _git(["remote", "set-head", "origin", "--delete"], cwd=origin.canonical)
+
+    code, output = _add(ws, "--json")
+
+    assert code == 0, output
+    payload = json.loads(output)
+    assert payload["base"] == "master"
+    assert payload["start_point"] == "origin/master"
+
+
+def test_a_remote_that_was_added_but_never_fetched(
+    tmp_path: Path,
+    isolated_home: Path,
+    make_origin: Callable[..., OriginRepo],
+    make_canonical: Callable[..., Path],
+) -> None:
+    import shutil
+
+    origin = make_origin("api", default_branch="master")
+    tip = origin.advance()
+    canonical = make_canonical("api")  # its own history, on main; origin never fetched
+    _git(["remote", "add", "origin", str(origin.bare)], cwd=canonical)
+    root = tmp_path / "canonical-root"
+    target = root / "github.com" / "kybernetix" / "api"
+    target.parent.mkdir(parents=True)
+    shutil.move(str(canonical), str(target))
+    config_dir = isolated_home / ".config" / "brunch"
+    config_dir.mkdir(parents=True)
+    (config_dir / "config.toml").write_text(f'root = "{root}"\n', encoding="utf-8")
+    runner.invoke(app, ["init", "task-1", "-p", str(isolated_home)])
+    ws = isolated_home / "task-1"
+
+    code, output = _add(ws, "--json")
+
+    assert code == 0, output
+    payload = json.loads(output)
+    assert payload["base"] == "master"
+    assert payload["start_point"] == "origin/master"
+    assert _git(["rev-parse", "HEAD"], cwd=ws / "api").strip() == tip

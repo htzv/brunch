@@ -50,8 +50,8 @@ def plan_branch_start(
     """
 
     remote = _choose_remote(canonical, requested_remote, fetch=fetch)
-    effective_base = base or _default_base(canonical, remote)
     if remote is None or not fetch:
+        effective_base = base or _default_base(canonical, remote)
         return BranchStart(
             remote=remote,
             base=effective_base,
@@ -63,6 +63,8 @@ def plan_branch_start(
     if not dry_run:
         # Prune, so a remote branch deleted since the last fetch is not followed.
         git_remote.fetch_remote(canonical, remote, prune=True)
+    # After the fetch: it creates `<remote>/HEAD` when the clone has none yet.
+    effective_base = base or _default_base(canonical, remote)
     tracks = git_remote.remote_branch_ref(canonical, remote, branch)
     if tracks is not None:
         _refuse_explicit_base(remote, branch, base if base_was_given else None)
