@@ -60,18 +60,22 @@ def _write_claude_session(
     return f
 
 
-def _make_opencode_db(path: Path, rows: list[dict]) -> None:
-    """Create a fixture opencode.db with the columns the provider queries."""
+def _make_opencode_db(path: Path, rows: list[dict], *, table: str = "session") -> None:
+    """Create a fixture opencode.db with the columns the provider queries.
+
+    OpenCode 1 keeps sessions in ``session``; OpenCode 2 writes new ones to
+    ``session_v2`` (and, in the real database, also keeps the old rows in both).
+    """
 
     path.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(path)
     conn.execute(
-        "CREATE TABLE session ("
+        f"CREATE TABLE {table} ("
         "id TEXT PRIMARY KEY, parent_id TEXT, directory TEXT, title TEXT, "
         "time_updated INTEGER, time_archived INTEGER)"
     )
     conn.executemany(
-        "INSERT INTO session (id, parent_id, directory, title, time_updated, time_archived) "
+        f"INSERT INTO {table} (id, parent_id, directory, title, time_updated, time_archived) "
         "VALUES (:id, :parent_id, :directory, :title, :time_updated, :time_archived)",
         [
             {
@@ -221,6 +225,69 @@ class TestOpenCodeProvider:
 
     def test_missing_db_is_empty(self, tmp_path: Path) -> None:
         assert OpenCodeProvider(db_path=tmp_path / "nope.db").discover_under(tmp_path) == []
+
+
+class TestOpenCodeTwoSessionTables:
+    """OpenCode 2 writes new sessions to `session_v2`; the old `session` table goes stale."""
+
+    def _root(self, tmp_path: Path) -> Path:
+        root = tmp_path / "task"
+        root.mkdir()
+        return root
+
+    def test_a_session_only_in_the_new_table_is_found(self, tmp_path: Path) -> None:
+        root = self._root(tmp_path)
+        db = tmp_path / "opencode.db"
+        _make_opencode_db(
+            db, [{"id": "ses_new", "directory": str(root), "title": "New"}], table="session_v2"
+        )
+
+        found = OpenCodeProvider(db_path=db).discover_under(root)
+
+        assert [d.session for d in found] == ["ses_new"]
+        assert found[0].title == "New"
+
+    def test_the_new_table_wins_when_both_exist(self, tmp_path: Path) -> None:
+        root = self._root(tmp_path)
+        db = tmp_path / "opencode.db"
+        _make_opencode_db(db, [{"id": "ses_old", "directory": str(root)}], table="session")
+        conn = sqlite3.connect(db)
+        conn.execute(
+            "CREATE TABLE session_v2 (id TEXT PRIMARY KEY, parent_id TEXT, directory TEXT, "
+            "title TEXT, time_updated INTEGER, time_archived INTEGER)"
+        )
+        conn.executemany(
+            "INSERT INTO session_v2 (id, directory, time_updated) VALUES (?, ?, 1)",
+            [("ses_old", str(root)), ("ses_new", str(root))],
+        )
+        conn.commit()
+        conn.close()
+
+        found = OpenCodeProvider(db_path=db).discover_under(root)
+
+        assert {d.session for d in found} == {"ses_old", "ses_new"}
+
+    def test_the_old_table_is_still_read_when_there_is_no_new_one(self, tmp_path: Path) -> None:
+        root = self._root(tmp_path)
+        db = tmp_path / "opencode.db"
+        _make_opencode_db(db, [{"id": "ses_old", "directory": str(root)}], table="session")
+
+        assert [d.session for d in OpenCodeProvider(db_path=db).discover_under(root)] == ["ses_old"]
+
+    def test_capture_sees_a_session_only_in_the_new_table(self, tmp_path: Path) -> None:
+        root = self._root(tmp_path)
+        db = tmp_path / "opencode.db"
+        _make_opencode_db(db, [{"id": "ses_new", "directory": str(root)}], table="session_v2")
+
+        assert OpenCodeProvider(db_path=db).session_ids_in(root) == {"ses_new"}
+
+    def test_a_database_with_neither_table_is_empty(self, tmp_path: Path) -> None:
+        db = tmp_path / "opencode.db"
+        sqlite3.connect(db).close()
+        provider = OpenCodeProvider(db_path=db)
+
+        assert provider.discover_under(tmp_path) == []
+        assert provider.session_ids_in(tmp_path) == set()
 
 
 # --- service: merge / match / register -------------------------------------
