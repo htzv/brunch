@@ -50,7 +50,7 @@ default_forge = "github.com"
 Needs Python 3.11 or newer and [uv](https://docs.astral.sh/uv/).
 
 ```bash
-uv tool install git+https://github.com/htzv/brunch@v0.1.0rc1
+uv tool install git+https://github.com/htzv/brunch@v0.1.0rc3
 br --version
 ```
 
@@ -71,6 +71,8 @@ first.
 ## More
 
 - [Changelog](CHANGELOG.md): what changed in each release.
+- [Using brunch from a coding agent](docs-site/agents.md): a block of instructions to
+  paste into an agent's prompt.
 - [Walkthrough](docs-site/walkthrough/index.md): nine short pages that take one task
   from creation to teardown. Build the site with
   `uv sync --extra docs && uv run mkdocs serve`.

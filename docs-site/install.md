@@ -8,7 +8,7 @@ You need [uv](https://docs.astral.sh/uv/), git, and Python 3.11 or newer.
 ## Install a release
 
 ```bash
-uv tool install git+https://github.com/htzv/brunch@v0.1.0rc1
+uv tool install git+https://github.com/htzv/brunch@v0.1.0rc3
 br --version
 ```
 
@@ -52,7 +52,7 @@ that directory held, and does not follow `main` (see [Update](update.md)).
 Reinstall with `--force`, whatever the old install came from:
 
 ```bash
-uv tool install --force git+https://github.com/htzv/brunch@v0.1.0rc1
+uv tool install --force git+https://github.com/htzv/brunch@v0.1.0rc3
 ```
 
 ## Uninstall
