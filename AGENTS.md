@@ -91,6 +91,14 @@ pull request.
 - **Use types for correctness and for reading.** Prefer enums, `Literal`, frozen
   sets and frozen models over bare strings and mutable collections whenever a
   value comes from a fixed set.
+- **A git check can be stale by the time you act on it (TOCTOU).** Git state
+  changes under you: another `br`, an agent, a hook, a custom fetch refspec. Let
+  git be the final check where it can: `git worktree add -b` fails if the branch
+  exists, and `git worktree add <path> <branch>` fails if it is gone, so report
+  that failure as the real answer instead of trusting an earlier check. Look
+  again after anything that can change refs, such as a fetch (`add` and `sync`
+  re-check the branch after fetching). Report what git actually did, not what the
+  check predicted.
 - **Make illegal states impossible to represent**, as long as it stays simple. If
   two fields only make sense together, model them as one type. Do not build
   machinery for a state that cannot happen.
