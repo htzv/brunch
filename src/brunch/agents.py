@@ -240,6 +240,18 @@ def default_opencode_db_path() -> Path:
     return root / "opencode" / "opencode.db"
 
 
+OPENCODE_SESSION_TABLES = ("session_v2", "session")
+"""Newest first. OpenCode 2 writes new sessions to ``session_v2``; the older
+``session`` table keeps the earlier ones, all of which ``session_v2`` also holds."""
+
+
+def _opencode_sessions_table(conn: sqlite3.Connection) -> str | None:
+    """The table holding OpenCode's sessions in this database, or None."""
+
+    present = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
+    return next((t for t in OPENCODE_SESSION_TABLES if t in present), None)
+
+
 class OpenCodeProvider(AgentProvider):
     kind: AgentKind = "opencode"
     cli = "opencode"
@@ -263,8 +275,11 @@ class OpenCodeProvider(AgentProvider):
             return []
         out: list[DiscoveredSession] = []
         try:
+            table = _opencode_sessions_table(conn)
+            if table is None:
+                return []
             rows = conn.execute(
-                "SELECT id, directory, title, time_updated FROM session "
+                f"SELECT id, directory, title, time_updated FROM {table} "
                 "WHERE parent_id IS NULL AND time_archived IS NULL "
                 "AND (directory = ? OR directory LIKE ?) "
                 "ORDER BY time_updated DESC",
@@ -291,8 +306,11 @@ class OpenCodeProvider(AgentProvider):
         if conn is None:
             return set()
         try:
+            table = _opencode_sessions_table(conn)
+            if table is None:
+                return set()
             rows = conn.execute(
-                "SELECT id FROM session WHERE parent_id IS NULL AND directory = ?",
+                f"SELECT id FROM {table} WHERE parent_id IS NULL AND directory = ?",
                 (str(directory.resolve()),),
             ).fetchall()
         except sqlite3.Error:

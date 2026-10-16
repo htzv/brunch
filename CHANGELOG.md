@@ -29,6 +29,12 @@ version. Entries refer to pull requests in
   of the workspace's name, because the base would be ignored. Drop `--base`, or
   pick another `--branch`. (#29)
 
+### Fixed
+
+- `br agent list`, `sync` and `new` did not see OpenCode sessions created by
+  OpenCode 2, which stores them in a new `session_v2` table. They are found again;
+  OpenCode 1 databases still work. (#32)
+
 ## [0.1.0rc3] - 2026-10-15
 
 ### Added
