@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+FETCH_CREATED_THE_BRANCH = (
+    "fetched {remote!r}; the fetch itself created the branch locally, so it is checked out as it is"
+)
+
 
 def describe_start(
     *,

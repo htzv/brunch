@@ -205,3 +205,29 @@ class TestInitFromATemplate:
         assert result.exit_code == 0, result.output
         head = _git(["rev-parse", "HEAD"], cwd=isolated_home / "task-2" / "api").strip()
         assert head == _git(["rev-parse", "main"], cwd=origin.canonical).strip() != new_tip
+
+
+class TestAFetchThatCreatesTheBranchItself:
+    """A custom refspec can make the fetch create `refs/heads/<branch>` locally."""
+
+    def test_the_report_says_what_really_happened(self, stale_setup: Setup) -> None:
+        origin, ws, _ = stale_setup
+        origin.publish_branch(BRANCH)
+        tip = origin.advance(BRANCH)
+        _git(["fetch", "origin"], cwd=origin.canonical)  # leaves origin/<branch> behind
+        _git(
+            ["config", "remote.origin.fetch", f"+refs/heads/{BRANCH}:refs/heads/{BRANCH}"],
+            cwd=origin.canonical,
+        )
+        _declare_repo(ws)
+
+        code, output = _sync(ws, "--json")
+
+        assert code == 0, output
+        action = json.loads(output)["actions"][0]
+        assert action["tracks"] is None
+        assert action["start_point"] is None
+        assert action["fetched"] is True
+        assert "the fetch itself created the branch" in action["message"]
+        assert _git(["rev-parse", "HEAD"], cwd=ws / "api").strip() == tip
+        assert _config_get(ws / "api", f"branch.{BRANCH}.remote") == ""

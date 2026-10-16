@@ -233,7 +233,7 @@ class SyncAction(BaseModel):
     remote: str | None = None
     """For a created worktree: the remote chosen for the fetch and the start point."""
     start_point: str | None = None
-    """For a created worktree: the ref its new branch started from."""
+    """For a created worktree: the ref its new branch started from; None if it already existed."""
     fetched: bool = False
     """For a created worktree: the remote was fetched first."""
     tracks: str | None = None
