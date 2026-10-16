@@ -230,6 +230,14 @@ class SyncAction(BaseModel):
     action: SyncActionType
     message: str
     hint: str | None = None
+    remote: str | None = None
+    """For a created worktree: the remote chosen for the fetch and the start point."""
+    start_point: str | None = None
+    """For a created worktree: the ref its new branch started from."""
+    fetched: bool = False
+    """For a created worktree: the remote was fetched first."""
+    tracks: str | None = None
+    """For a created worktree: the remote branch it was taken from and tracks."""
 
 
 class SyncReport(BaseModel):
