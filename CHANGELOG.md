@@ -14,13 +14,13 @@ version. Entries refer to pull requests in
   does: the worktree starts from `origin/<branch>` and tracks it, which suits
   reviewing a pull request or resuming work from another machine. The outcome and
   `--json` report it as `tracks`. Remote branches deleted since the last fetch are
-  pruned first, so they are not followed.
+  pruned first, so they are not followed. (#29)
 
 ### Changed
 
 - **Breaking:** `br add --base <branch>` is an error when the remote has a branch
   of the workspace's name, because the base would be ignored. Drop `--base`, or
-  pick another `--branch`.
+  pick another `--branch`. (#29)
 
 ## [0.1.0rc3] - 2026-10-15
 
