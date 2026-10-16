@@ -25,6 +25,10 @@ version. Entries refer to pull requests in
 
 ### Changed
 
+- `br add` without `--base` starts from the remote's default branch (what the
+  clone's `origin/HEAD` points to, `main` if that is unknown) instead of always
+  `main`, so repos whose default is `master` or `develop` work. `brunch.toml`
+  records that branch as the base. (#33)
 - **Breaking:** `br add --base <branch>` is an error when the remote has a branch
   of the workspace's name, because the base would be ignored. Drop `--base`, or
   pick another `--branch`. (#29)
